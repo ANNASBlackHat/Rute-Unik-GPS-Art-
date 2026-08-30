@@ -5,6 +5,7 @@ import { routing } from '@/i18n/routing';
 import { fontDisplay, fontData, fontBody } from '@/lib/fonts';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { NavbarUser } from '@/components/auth/NavbarUser';
+import { RouteFocus } from '@/components/RouteFocus';
 import { Link } from '@/i18n/routing';
 import '../globals.css';
 
@@ -52,14 +53,14 @@ export default async function LocaleLayout({
               </Link>
 
               <div className="flex items-center gap-4">
-                <nav className="flex items-center gap-3 sm:gap-4 text-xs font-display uppercase tracking-wider text-ink/80">
+                <nav className="flex items-center gap-3 sm:gap-4 text-xs font-display uppercase tracking-wider text-ink/80" aria-label="Main navigation">
                   <Link
                     href="/"
-                    className="hover:text-ink transition-colors py-1"
+                    className="inline-flex items-center min-h-11 px-1.5 py-2 hover:text-ink transition-colors"
                   >
                     {locale === 'id' ? 'Jelajah' : 'Explore'}
                   </Link>
-                  <span className="text-contour-tan">/</span>
+                  <span className="text-contour-tan" aria-hidden="true">/</span>
                   <NavbarUser locale={locale} />
                 </nav>
 
@@ -69,6 +70,7 @@ export default async function LocaleLayout({
           </header>
 
           <main id="main-content" tabIndex={-1} className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-6 py-8 focus:outline-none">
+            <RouteFocus />
             {children}
           </main>
 

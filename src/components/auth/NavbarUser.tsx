@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Link, useRouter } from '@/i18n/routing';
+import { Link, useRouter, usePathname } from '@/i18n/routing';
 import { useTranslations } from 'next-intl';
 
 interface NavUser {
@@ -14,8 +14,10 @@ interface NavUser {
 export function NavbarUser({ locale }: { locale: string }) {
   const t = useTranslations('common');
   const router = useRouter();
+  const pathname = usePathname();
   const [user, setUser] = useState<NavUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -49,7 +51,8 @@ export function NavbarUser({ locale }: { locale: string }) {
     <div className="flex items-center gap-1.5 sm:gap-3 text-xs font-display uppercase tracking-wider">
       <Link
         href="/upload"
-        className="inline-flex items-center min-h-11 px-1.5 py-2 hover:text-ink text-ink/80 transition-colors"
+        aria-current={isActive('/upload') ? 'page' : undefined}
+        className={`inline-flex items-center min-h-11 px-1.5 py-2 transition-colors ${isActive('/upload') ? 'text-ink font-bold border-b-2 border-trail-orange' : 'text-ink/80 hover:text-ink'}`}
       >
         {t('upload')}
       </Link>
@@ -59,7 +62,8 @@ export function NavbarUser({ locale }: { locale: string }) {
           <span className="text-contour-tan" aria-hidden="true">/</span>
           <Link
             href="/me"
-            className="inline-flex items-center min-h-11 px-1.5 py-2 hover:text-ink text-ink/80 transition-colors"
+            aria-current={isActive('/me') ? 'page' : undefined}
+            className={`inline-flex items-center min-h-11 px-1.5 py-2 transition-colors ${isActive('/me') ? 'text-ink font-bold border-b-2 border-trail-orange' : 'text-ink/80 hover:text-ink'}`}
           >
             {t('myUploads')}
           </Link>
@@ -69,7 +73,8 @@ export function NavbarUser({ locale }: { locale: string }) {
               <Link
                 href="/admin"
                 id="navbar-admin-link"
-                className="inline-flex items-center min-h-11 px-1.5 py-2 text-ink font-bold hover:text-trail-orange-text hover:underline underline-offset-2 transition-colors"
+                aria-current={isActive('/admin') ? 'page' : undefined}
+                className={`inline-flex items-center min-h-11 px-1.5 py-2 font-bold transition-colors ${isActive('/admin') ? 'text-ink border-b-2 border-trail-orange' : 'text-ink hover:text-trail-orange-text hover:underline underline-offset-2'}`}
               >
                 {t('admin')}
               </Link>
