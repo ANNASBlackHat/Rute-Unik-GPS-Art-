@@ -35,7 +35,8 @@ export function CityFilter({
         id="filter-all-cities"
         data-city="all"
         onClick={() => onSelectCity(null)}
-        className={`px-3 py-1.5 rounded-[4px] font-data text-xs uppercase tracking-wider transition-colors border select-none cursor-pointer ${
+        aria-pressed={selectedCityId === null}
+        className={`min-h-9 px-3 py-2 rounded-[4px] font-data text-xs uppercase tracking-wider transition-colors border select-none cursor-pointer ${
           selectedCityId === null
             ? 'bg-ink text-chalk border-ink font-bold'
             : 'bg-chalk text-ink border-contour-tan hover:border-ink'
@@ -53,7 +54,8 @@ export function CityFilter({
             id={`filter-city-${city.name.toLowerCase()}`}
             data-city={city.name.toLowerCase()}
             onClick={() => onSelectCity(city.id)}
-            className={`px-3 py-1.5 rounded-[4px] font-data text-xs uppercase tracking-wider transition-colors border select-none cursor-pointer ${
+            aria-pressed={isSelected}
+            className={`min-h-9 px-3 py-2 rounded-[4px] font-data text-xs uppercase tracking-wider transition-colors border select-none cursor-pointer ${
               isSelected
                 ? 'bg-ink text-chalk border-ink font-bold'
                 : 'bg-chalk text-ink border-contour-tan hover:border-ink'

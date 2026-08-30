@@ -29,12 +29,12 @@ export function LanguageSwitcher() {
         data-locale="id"
         onClick={() => handleLocaleChange('id')}
         disabled={isPending}
-        className={`px-2.5 py-1 rounded-[3px] uppercase font-bold tracking-wider transition-colors ${
+        className={`min-h-9 px-3 py-2 rounded-[3px] uppercase font-bold tracking-wider transition-colors ${
           locale === 'id'
             ? 'bg-ink text-chalk'
             : 'text-ink/70 hover:text-ink hover:bg-paper/50'
         }`}
-        aria-label="Ganti bahasa ke Bahasa Indonesia"
+        aria-label="ID — Ganti bahasa ke Bahasa Indonesia"
       >
         ID
       </button>
@@ -44,12 +44,12 @@ export function LanguageSwitcher() {
         data-locale="en"
         onClick={() => handleLocaleChange('en')}
         disabled={isPending}
-        className={`px-2.5 py-1 rounded-[3px] uppercase font-bold tracking-wider transition-colors ${
+        className={`min-h-9 px-3 py-2 rounded-[3px] uppercase font-bold tracking-wider transition-colors ${
           locale === 'en'
             ? 'bg-ink text-chalk'
             : 'text-ink/70 hover:text-ink hover:bg-paper/50'
         }`}
-        aria-label="Switch language to English"
+        aria-label="EN — Switch language to English"
       >
         EN
       </button>

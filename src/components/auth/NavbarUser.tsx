@@ -46,51 +46,51 @@ export function NavbarUser({ locale }: { locale: string }) {
   }
 
   return (
-    <div className="flex items-center gap-3 text-xs font-display uppercase tracking-wider">
+    <div className="flex items-center gap-1.5 sm:gap-3 text-xs font-display uppercase tracking-wider">
       <Link
         href="/upload"
-        className="hover:text-trail-orange transition-colors py-1 text-ink/80"
+        className="inline-flex items-center min-h-11 px-1.5 py-2 hover:text-ink text-ink/80 transition-colors"
       >
         {t('upload')}
       </Link>
 
       {user ? (
         <>
-          <span className="text-contour-tan">/</span>
+          <span className="text-contour-tan" aria-hidden="true">/</span>
           <Link
             href="/me"
-            className="hover:text-trail-orange transition-colors py-1 text-ink/80"
+            className="inline-flex items-center min-h-11 px-1.5 py-2 hover:text-ink text-ink/80 transition-colors"
           >
             {t('myUploads')}
           </Link>
           {user.role === 'admin' && (
             <>
-              <span className="text-contour-tan">/</span>
+              <span className="text-contour-tan" aria-hidden="true">/</span>
               <Link
                 href="/admin"
                 id="navbar-admin-link"
-                className="text-trail-orange font-bold hover:underline transition-colors py-1"
+                className="inline-flex items-center min-h-11 px-1.5 py-2 text-ink font-bold hover:text-trail-orange-text hover:underline underline-offset-2 transition-colors"
               >
                 {t('admin')}
               </Link>
             </>
           )}
-          <span className="text-contour-tan">/</span>
+          <span className="text-contour-tan" aria-hidden="true">/</span>
           <button
             type="button"
             id="btn-navbar-logout"
             onClick={handleLogout}
-            className="text-ink/60 hover:text-ink transition-colors cursor-pointer py-1 uppercase"
+            className="inline-flex items-center min-h-11 px-1.5 py-2 text-ink/70 hover:text-ink transition-colors cursor-pointer uppercase"
           >
             {locale === 'id' ? 'Keluar' : 'Logout'}
           </button>
         </>
       ) : (
         <>
-          <span className="text-contour-tan">/</span>
+          <span className="text-contour-tan" aria-hidden="true">/</span>
           <Link
             href="/login"
-            className="hover:text-trail-orange transition-colors py-1 text-ink/80"
+            className="inline-flex items-center min-h-11 px-1.5 py-2 hover:text-ink text-ink/80 transition-colors"
           >
             {locale === 'id' ? 'Masuk' : 'Login'}
           </Link>

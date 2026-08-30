@@ -11,10 +11,10 @@ export function Badge({ variant, children, className = '' }: BadgeProps) {
     'inline-flex items-center px-2 py-0.5 text-[11px] font-data tracking-wide rounded-[4px] uppercase select-none';
 
   const variants = {
-    official: 'bg-trail-orange text-chalk',
+    official: 'bg-[#B83214] text-chalk',
     community: 'border border-contour-tan text-ink bg-transparent',
     pending: 'border border-moss text-moss bg-transparent',
-    rejected: 'border border-[#9B2C2C] text-[#9B2C2C] bg-transparent',
+    rejected: 'border border-error text-error bg-transparent',
   };
 
   return (

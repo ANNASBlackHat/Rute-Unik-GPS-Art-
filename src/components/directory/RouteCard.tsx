@@ -47,30 +47,35 @@ export function RouteCard({ route }: RouteCardProps) {
           </div>
 
           {/* Predominant inline SVG linework preview (square aspect ratio) */}
-          <div className="w-full aspect-square bg-paper/60 rounded-[8px] p-6 border border-contour-tan/50 flex items-center justify-center mb-4 group-hover:bg-paper/80 transition-colors">
+          <div
+            className="w-full aspect-square bg-paper/60 rounded-[8px] p-6 border border-contour-tan/50 flex items-center justify-center mb-4 group-hover:bg-paper/80 transition-colors"
+            role="img"
+            aria-label={`${route.name} — ${route.city_name} shape preview, ${distanceKm} km`}
+          >
             <div
               className="w-full h-full flex items-center justify-center [&>svg]:w-full [&>svg]:h-full [&>svg]:max-h-full [&>svg]:stroke-ink"
+              aria-hidden="true"
               dangerouslySetInnerHTML={{ __html: route.thumbnail_svg }}
             />
           </div>
 
           {/* Route Name in Archivo Black uppercase */}
-          <h3 className="font-display text-lg tracking-tight uppercase text-ink group-hover:text-trail-orange transition-colors">
+          <h2 className="font-display text-lg tracking-tight uppercase text-ink group-hover:text-trail-orange-text transition-colors">
             {route.name}
-          </h3>
+          </h2>
         </div>
 
         {/* Hairline divider & bottom stat row in JetBrains Mono */}
-        <div className="mt-4 pt-3 border-t border-contour-tan flex items-center justify-between text-[11px] font-data text-ink/80">
+        <div className="mt-4 pt-3 border-t border-contour-tan flex items-center justify-between text-xs font-data text-ink">
           <div>
-            <span className="text-ink/50 text-[9px] block uppercase tracking-wider">
+            <span className="text-ink/70 text-[11px] block uppercase tracking-wider">
               {t('distance')}
             </span>
             <span className="font-bold">{distanceKm} km</span>
           </div>
 
           <div className="text-right">
-            <span className="text-ink/50 text-[9px] block uppercase tracking-wider">
+            <span className="text-ink/70 text-[11px] block uppercase tracking-wider">
               {t('elevation')}
             </span>
             <span className="font-bold">{elevation}</span>

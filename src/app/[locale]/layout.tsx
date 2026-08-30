@@ -33,6 +33,9 @@ export default async function LocaleLayout({
       className={`${fontDisplay.variable} ${fontData.variable} ${fontBody.variable}`}
     >
       <body className="bg-paper text-ink min-h-screen font-body antialiased flex flex-col selection:bg-trail-orange selection:text-chalk">
+        <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-4 focus:z-[100] focus:bg-ink focus:text-chalk focus:px-4 focus:py-2 focus:rounded-[4px] focus:font-data focus:text-xs focus:uppercase">
+          Skip to main content
+        </a>
         <NextIntlClientProvider messages={messages}>
           <header className="border-b border-contour-tan bg-paper sticky top-0 z-40">
             <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
@@ -65,7 +68,7 @@ export default async function LocaleLayout({
             </div>
           </header>
 
-          <main className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-6 py-8">
+          <main id="main-content" tabIndex={-1} className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-6 py-8 focus:outline-none">
             {children}
           </main>
 

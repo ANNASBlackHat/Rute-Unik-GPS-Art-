@@ -27,6 +27,10 @@ export function GhostRunner({
   const startTimeRef = useRef<number | null>(null);
   const pausedProgressRef = useRef<number>(0);
 
+  const prefersReducedMotion =
+    typeof window !== 'undefined' &&
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
   // Initialize marker on map
   useEffect(() => {
     if (!map || coordinates.length === 0) return;
@@ -34,8 +38,8 @@ export function GhostRunner({
     const el = document.createElement('div');
     el.className = 'ghost-runner-marker';
     el.innerHTML = `
-      <div style="width: 32px; height: 32px; border-radius: 50%; background-color: #E8562C; color: #F7F5EF; display: flex; align-items: center; justify-content: center; font-size: 16px; border: 2px solid #F7F5EF; box-shadow: 0 2px 6px rgba(0,0,0,0.35); transition: transform 0.05s ease-out; z-index: 20;" title="Ghost Runner">
-        🏃
+      <div style="width: 32px; height: 32px; border-radius: 50%; background-color: #E8562C; color: #F7F5EF; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; border: 2px solid #F7F5EF; box-shadow: 0 2px 6px rgba(0,0,0,0.35); z-index: 20;" title="Ghost Runner" aria-label="Ghost runner position">
+        ●
       </div>
     `;
 
@@ -96,6 +100,7 @@ export function GhostRunner({
 
   const handlePlay = () => {
     if (isPlaying) return;
+    if (prefersReducedMotion) return;
 
     if (progress >= 1) {
       pausedProgressRef.current = 0;
@@ -152,8 +157,8 @@ export function GhostRunner({
       className={`p-3 bg-chalk border border-contour-tan rounded-[8px] flex flex-wrap items-center justify-between gap-3 font-data text-xs ${className}`}
     >
       <div className="flex items-center gap-2">
-        <span className="w-2.5 h-2.5 rounded-full bg-trail-orange animate-pulse" />
-        <span className="font-display text-[11px] uppercase tracking-wider text-ink">
+        <span className="w-2.5 h-2.5 rounded-full bg-trail-orange motion-safe:animate-pulse" aria-hidden="true" />
+        <span className="font-display text-xs uppercase tracking-wider text-ink">
           {t('ghostRunnerTitle')}
         </span>
       </div>
@@ -165,7 +170,9 @@ export function GhostRunner({
             id="btn-ghost-play"
             data-testid="btn-ghost-play"
             onClick={handlePlay}
-            className="px-3 py-1 bg-ink text-chalk rounded-[4px] font-bold uppercase tracking-wider text-[10px] hover:bg-ink/80 transition-colors select-none cursor-pointer"
+            disabled={prefersReducedMotion}
+            aria-label={prefersReducedMotion ? 'Animation disabled (reduced motion)' : undefined}
+            className="min-h-9 px-4 py-2 bg-ink text-chalk rounded-[4px] font-bold uppercase tracking-wider text-xs hover:bg-ink/80 transition-colors select-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             ▶ {t('play')}
           </button>
@@ -175,7 +182,7 @@ export function GhostRunner({
             id="btn-ghost-pause"
             data-testid="btn-ghost-pause"
             onClick={handlePause}
-            className="px-3 py-1 bg-contour-tan text-ink rounded-[4px] font-bold uppercase tracking-wider text-[10px] hover:bg-contour-tan/80 transition-colors select-none cursor-pointer"
+            className="min-h-9 px-4 py-2 bg-contour-tan text-ink rounded-[4px] font-bold uppercase tracking-wider text-xs hover:bg-contour-tan/80 transition-colors select-none cursor-pointer"
           >
             ⏸ {t('pause')}
           </button>
@@ -186,7 +193,7 @@ export function GhostRunner({
           id="btn-ghost-restart"
           data-testid="btn-ghost-restart"
           onClick={handleRestart}
-          className="px-2.5 py-1 border border-contour-tan text-ink rounded-[4px] font-bold uppercase tracking-wider text-[10px] hover:border-ink transition-colors select-none cursor-pointer"
+          className="min-h-9 px-3 py-2 border border-contour-tan text-ink rounded-[4px] font-bold uppercase tracking-wider text-xs hover:border-ink transition-colors select-none cursor-pointer"
           title={t('restart')}
         >
           ↺ {t('restart')}
@@ -202,7 +209,7 @@ export function GhostRunner({
           />
         </div>
 
-        <span className="text-[10px] text-ink/70 min-w-[50px] text-right">
+        <span className="text-xs text-ink min-w-[50px] text-right">
           {progressPercent}% · {elapsedFormatted}
         </span>
       </div>
