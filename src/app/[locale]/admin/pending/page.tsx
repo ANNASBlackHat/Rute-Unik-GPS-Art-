@@ -3,6 +3,8 @@ import { setRequestLocale } from 'next-intl/server';
 import { Client } from 'pg';
 import { PendingList, PendingRoute } from '@/components/admin/PendingList';
 
+export const dynamic = 'force-dynamic';
+
 export default async function AdminPendingPage({
   params,
 }: {
@@ -18,10 +20,9 @@ export default async function AdminPendingPage({
       : undefined,
   });
 
-  await client.connect();
-
   let routes: PendingRoute[] = [];
   try {
+    await client.connect();
     const query = `
       select 
         r.id,
@@ -47,8 +48,12 @@ export default async function AdminPendingPage({
       distance_m: Number(row.distance_m),
       elevation_gain_m: row.elevation_gain_m ? Number(row.elevation_gain_m) : null,
     }));
+  } catch (err) {
+    console.error('AdminPendingPage DB error (fallback to empty):', err);
   } finally {
-    await client.end();
+    try {
+      await client.end();
+    } catch {}
   }
 
   return <PendingList initialRoutes={routes} />;

@@ -3,6 +3,8 @@ import { setRequestLocale } from 'next-intl/server';
 import { Client } from 'pg';
 import { CityManager, AdminCityItem } from '@/components/admin/CityManager';
 
+export const dynamic = 'force-dynamic';
+
 export default async function AdminCitiesPage({
   params,
 }: {
@@ -18,10 +20,9 @@ export default async function AdminCitiesPage({
       : undefined,
   });
 
-  await client.connect();
-
   let cities: AdminCityItem[] = [];
   try {
+    await client.connect();
     const query = `
       select 
         c.id, 
@@ -43,8 +44,12 @@ export default async function AdminCitiesPage({
       center_lon: Number(row.center_lon),
       routes_count: Number(row.routes_count),
     }));
+  } catch (err) {
+    console.error('AdminCitiesPage DB error (build will fallback to empty):', err);
   } finally {
-    await client.end();
+    try {
+      await client.end();
+    } catch {}
   }
 
   return <CityManager initialCities={cities} />;

@@ -3,6 +3,8 @@ import { setRequestLocale } from 'next-intl/server';
 import { Client } from 'pg';
 import { CatalogManager, CatalogRouteItem } from '@/components/admin/CatalogManager';
 
+export const dynamic = 'force-dynamic';
+
 export default async function AdminRoutesPage({
   params,
 }: {
@@ -18,10 +20,9 @@ export default async function AdminRoutesPage({
       : undefined,
   });
 
-  await client.connect();
-
   let routes: CatalogRouteItem[] = [];
   try {
+    await client.connect();
     const query = `
       select 
         r.id,
@@ -46,8 +47,12 @@ export default async function AdminRoutesPage({
       distance_m: Number(row.distance_m),
       elevation_gain_m: row.elevation_gain_m ? Number(row.elevation_gain_m) : null,
     }));
+  } catch (err) {
+    console.error('AdminRoutesPage DB error (fallback to empty):', err);
   } finally {
-    await client.end();
+    try {
+      await client.end();
+    } catch {}
   }
 
   return <CatalogManager initialRoutes={routes} />;

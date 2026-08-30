@@ -4,6 +4,8 @@ import { Client } from 'pg';
 import { DuplicatesList } from '@/components/admin/DuplicatesList';
 import type { DuplicateFlagItem } from '@/components/admin/DuplicateCompareMap';
 
+export const dynamic = 'force-dynamic';
+
 export default async function AdminDuplicatesPage({
   params,
 }: {
@@ -19,10 +21,9 @@ export default async function AdminDuplicatesPage({
       : undefined,
   });
 
-  await client.connect();
-
   let duplicates: DuplicateFlagItem[] = [];
   try {
+    await client.connect();
     const query = `
       select 
         f.id as flag_id,
@@ -50,8 +51,12 @@ export default async function AdminDuplicatesPage({
 
     const res = await client.query(query);
     duplicates = res.rows;
+  } catch (err) {
+    console.error('AdminDuplicatesPage DB error (fallback to empty):', err);
   } finally {
-    await client.end();
+    try {
+      await client.end();
+    } catch {}
   }
 
   return <DuplicatesList initialDuplicates={duplicates} />;
