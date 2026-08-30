@@ -34,14 +34,16 @@ export function RouteGrid({ initialRoutes, cities }: RouteGridProps) {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-contour-tan pb-4">
-        <CityFilter
-          cities={citiesWithCounts}
-          selectedCityId={selectedCityId}
-          onSelectCity={setSelectedCityId}
-          totalCount={initialRoutes.length}
-        />
+        <div className="min-w-0 flex-1">
+          <CityFilter
+            cities={citiesWithCounts}
+            selectedCityId={selectedCityId}
+            onSelectCity={setSelectedCityId}
+            totalCount={initialRoutes.length}
+          />
+        </div>
 
-        <span className="font-data text-xs text-ink/70">
+        <span className="font-data text-xs text-ink/70 shrink-0">
           {filteredRoutes.length} {t('routesCount')}
         </span>
       </div>

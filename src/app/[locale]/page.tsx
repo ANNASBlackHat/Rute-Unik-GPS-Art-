@@ -80,92 +80,82 @@ export default async function HomePage({
         <RouteGrid initialRoutes={routes} cities={cities} />
       </section>
 
-      {/* Design System Tokens Inspection Section */}
-      <section className="space-y-6 pt-10 border-t border-contour-tan">
-        <h2 className="font-display text-xl uppercase tracking-tight text-ink">
-          {tTokens('title')}
-        </h2>
+      {/* Design System Tokens — dev only (hidden in production) */}
+      {process.env.NODE_ENV !== 'production' && (
+        <section className="space-y-6 pt-10 border-t border-contour-tan">
+          <h2 className="font-display text-xl uppercase tracking-tight text-ink">
+            {tTokens('title')}
+          </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Color Palette */}
-          <Card className="space-y-4">
-            <h3 className="font-display text-sm uppercase text-ink">
-              {tTokens('paletteTitle')}
-            </h3>
-            <div className="space-y-2 font-data text-xs">
-              <div className="flex items-center gap-3 p-2 bg-[#EDE8DC] border border-contour-tan rounded-[4px]">
-                <div className="w-6 h-6 rounded bg-[#EDE8DC] border border-ink/20 shrink-0" />
-                <span className="text-ink">{tTokens('colorPaper')}</span>
-              </div>
-              <div className="flex items-center gap-3 p-2 bg-[#F7F5EF] border border-contour-tan rounded-[4px]">
-                <div className="w-6 h-6 rounded bg-[#1F2A1E] shrink-0" />
-                <span className="text-ink">{tTokens('colorInk')}</span>
-              </div>
-              <div className="flex items-center gap-3 p-2 bg-[#F7F5EF] border border-contour-tan rounded-[4px]">
-                <div className="w-6 h-6 rounded bg-[#E8562C] shrink-0" />
-                <span className="text-ink">{tTokens('colorTrailOrange')}</span>
-              </div>
-              <div className="flex items-center gap-3 p-2 bg-[#F7F5EF] border border-contour-tan rounded-[4px]">
-                <div className="w-6 h-6 rounded bg-[#5C6E4F] shrink-0" />
-                <span className="text-ink">{tTokens('colorMoss')}</span>
-              </div>
-              <div className="flex items-center gap-3 p-2 bg-[#F7F5EF] border border-contour-tan rounded-[4px]">
-                <div className="w-6 h-6 rounded bg-[#C9BFA6] shrink-0" />
-                <span className="text-ink">{tTokens('colorContourTan')}</span>
-              </div>
-              <div className="flex items-center gap-3 p-2 bg-[#F7F5EF] border border-contour-tan rounded-[4px]">
-                <div className="w-6 h-6 rounded bg-[#F7F5EF] border border-contour-tan shrink-0" />
-                <span className="text-ink">{tTokens('colorChalk')}</span>
-              </div>
-            </div>
-          </Card>
-
-          {/* Typography & Components */}
-          <Card className="space-y-4">
-            <h3 className="font-display text-sm uppercase text-ink">
-              {tTokens('typographyTitle')}
-            </h3>
-            <div className="space-y-3">
-              <div>
-                <span className="text-[10px] font-data text-ink/50 uppercase block">
-                  Display (Archivo Black)
-                </span>
-                <p className="font-display text-lg uppercase">
-                  RUTE UNIK GPS ART
-                </p>
-              </div>
-              <div>
-                <span className="text-[10px] font-data text-ink/50 uppercase block">
-                  Data (JetBrains Mono)
-                </span>
-                <p className="font-data text-xs font-bold text-ink">
-                  {tTokens('sampleMetric')}
-                </p>
-              </div>
-              <div>
-                <span className="text-[10px] font-data text-ink/50 uppercase block">
-                  Body (Inter)
-                </span>
-                <p className="font-body text-sm text-ink/80">
-                  Flat paper surfaces, hairline borders, single orange accent.
-                </p>
-              </div>
-
-              <div className="pt-2 border-t border-contour-tan space-y-2">
-                <span className="text-[10px] font-data text-ink/50 uppercase block">
-                  {tTokens('componentsTitle')}
-                </span>
-                <div className="flex flex-wrap gap-2 items-center">
-                  <Button variant="primary">Primary CTA</Button>
-                  <Button variant="secondary">Secondary Button</Button>
-                  <Badge variant="official">Official</Badge>
-                  <Badge variant="community">Community</Badge>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card className="space-y-4">
+              <h3 className="font-display text-sm uppercase text-ink">
+                {tTokens('paletteTitle')}
+              </h3>
+              <div className="space-y-2 font-data text-xs">
+                <div className="flex items-center gap-3 p-2 bg-[#EDE8DC] border border-contour-tan rounded-[4px]">
+                  <div className="w-6 h-6 rounded bg-[#EDE8DC] border border-ink/20 shrink-0" />
+                  <span className="text-ink">{tTokens('colorPaper')}</span>
+                </div>
+                <div className="flex items-center gap-3 p-2 bg-[#F7F5EF] border border-contour-tan rounded-[4px]">
+                  <div className="w-6 h-6 rounded bg-[#1F2A1E] shrink-0" />
+                  <span className="text-ink">{tTokens('colorInk')}</span>
+                </div>
+                <div className="flex items-center gap-3 p-2 bg-[#F7F5EF] border border-contour-tan rounded-[4px]">
+                  <div className="w-6 h-6 rounded bg-[#B83214] shrink-0" />
+                  <span className="text-ink">{tTokens('colorTrailOrange')}</span>
+                </div>
+                <div className="flex items-center gap-3 p-2 bg-[#F7F5EF] border border-contour-tan rounded-[4px]">
+                  <div className="w-6 h-6 rounded bg-[#5C6E4F] shrink-0" />
+                  <span className="text-ink">{tTokens('colorMoss')}</span>
+                </div>
+                <div className="flex items-center gap-3 p-2 bg-[#F7F5EF] border border-contour-tan rounded-[4px]">
+                  <div className="w-6 h-6 rounded bg-[#C9BFA6] shrink-0" />
+                  <span className="text-ink">{tTokens('colorContourTan')}</span>
+                </div>
+                <div className="flex items-center gap-3 p-2 bg-[#F7F5EF] border border-contour-tan rounded-[4px]">
+                  <div className="w-6 h-6 rounded bg-[#F7F5EF] border border-contour-tan shrink-0" />
+                  <span className="text-ink">{tTokens('colorChalk')}</span>
                 </div>
               </div>
-            </div>
-          </Card>
-        </div>
-      </section>
+            </Card>
+
+            <Card className="space-y-4">
+              <h3 className="font-display text-sm uppercase text-ink">
+                {tTokens('typographyTitle')}
+              </h3>
+              <div className="space-y-3">
+                <div>
+                  <span className="text-xs font-data text-ink/70 uppercase block">
+                    Display (Archivo Black)
+                  </span>
+                  <p className="font-display text-lg uppercase">RUTE UNIK GPS ART</p>
+                </div>
+                <div>
+                  <span className="text-xs font-data text-ink/70 uppercase block">
+                    Data (JetBrains Mono)
+                  </span>
+                  <p className="font-data text-xs font-bold text-ink">{tTokens('sampleMetric')}</p>
+                </div>
+                <div>
+                  <span className="text-xs font-data text-ink/70 uppercase block">Body (Inter)</span>
+                  <p className="font-body text-sm text-ink">Flat paper surfaces, hairline borders, single orange accent.</p>
+                </div>
+
+                <div className="pt-2 border-t border-contour-tan space-y-2">
+                  <span className="text-xs font-data text-ink/70 uppercase block">{tTokens('componentsTitle')}</span>
+                  <div className="flex flex-wrap gap-2 items-center">
+                    <Button variant="primary">Primary CTA</Button>
+                    <Button variant="secondary">Secondary Button</Button>
+                    <Badge variant="official">Official</Badge>
+                    <Badge variant="community">Community</Badge>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </div>
+        </section>
+      )}
     </div>
   );
 }
