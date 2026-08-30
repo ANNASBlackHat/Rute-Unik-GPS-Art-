@@ -1,26 +1,67 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --color-paper: #EDE8DC;        /* page background */
+  --color-ink: #1F2A1E;          /* text, linework, borders on dark */
+  --color-trail-orange: #E8562C; /* the one accent — CTAs, Official badge */
+  --color-moss: #5C6E4F;         /* secondary / completed / success state */
+  --color-contour-tan: #C9BFA6;  /* hairline borders, dividers */
+  --color-chalk: #F7F5EF;        /* card surfaces sitting on paper */
+
+  --radius-card: 12px;
+  --radius-badge: 4px;
+  --border-hairline: 1px solid var(--color-contour-tan);
+  --space-card-padding: 16px;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+@theme {
+  --color-paper: #EDE8DC;
+  --color-ink: #1F2A1E;
+  --color-trail-orange: #E8562C;
+  --color-moss: #5C6E4F;
+  --color-contour-tan: #C9BFA6;
+  --color-chalk: #F7F5EF;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --font-display: var(--font-archivo-black), sans-serif;
+  --font-data: var(--font-jetbrains-mono), monospace;
+  --font-body: var(--font-inter), sans-serif;
+
+  --radius-card: 12px;
+  --radius-badge: 4px;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-inter), sans-serif;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+.hairline-border {
+  border: 1px solid var(--color-contour-tan);
+}
+
+.hairline-border-t {
+  border-top: 1px solid var(--color-contour-tan);
+}
+
+.hairline-border-b {
+  border-bottom: 1px solid var(--color-contour-tan);
+}
+
+.hairline-border-l {
+  border-left: 1px solid var(--color-contour-tan);
+}
+
+.hairline-border-r {
+  border-right: 1px solid var(--color-contour-tan);
+}
+
+.paper-card {
+  background-color: var(--color-chalk);
+  border: 1px solid var(--color-contour-tan);
+  border-radius: var(--radius-card);
+  box-shadow: none;
 }
