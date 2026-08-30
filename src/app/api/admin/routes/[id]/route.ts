@@ -1,0 +1,45 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { requireAdminUser } from '@/lib/admin';
+import { Client } from 'pg';
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const auth = await requireAdminUser();
+  if (!auth.authorized) return auth.response;
+
+  const { id } = await params;
+  const body = await request.json();
+  const { name, city_id, status } = body;
+
+  const client = new Client({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.DATABASE_URL?.includes('supabase.co')
+      ? { rejectUnauthorized: false }
+      : undefined,
+  });
+
+  await client.connect();
+
+  try {
+    const query = `
+      update public.routes
+      set name = coalesce($1, name),
+          city_id = coalesce($2, city_id),
+          status = coalesce($3, status)
+      where id = $4
+      returning id, name, city_id, status;
+    `;
+
+    const res = await client.query(query, [name, city_id, status, id]);
+
+    if (res.rows.length === 0) {
+      return NextResponse.json({ error: 'Route not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, route: res.rows[0] });
+  } finally {
+    await client.end();
+  }
+}

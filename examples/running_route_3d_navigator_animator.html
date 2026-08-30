@@ -1,0 +1,1453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Yogyakarta Run Route 3D Simulator</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Leaflet CSS & JS (Reliable CDN) -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      overflow: hidden;
+      user-select: none;
+    }
+    .font-mono {
+      font-family: 'JetBrains+Mono', monospace;
+    }
+    /* Custom 3D Tilt container for perspective mode */
+    #map-viewport {
+      perspective: 1000px;
+      perspective-origin: 50% 80%;
+      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    #map {
+      transition: transform 0.4s ease-out;
+      transform-origin: 50% 70%;
+    }
+    .mode-3d-pov #map {
+      transform: rotateX(54deg) scale(1.18);
+    }
+    .mode-3d-drone #map {
+      transform: rotateX(32deg) scale(1.08);
+    }
+    .mode-2d #map {
+      transform: rotateX(0deg) scale(1);
+    }
+    /* Custom pulse ring for runner marker */
+    @keyframes pulse-ring {
+      0% { transform: scale(0.6); opacity: 0.9; }
+      100% { transform: scale(2.2); opacity: 0; }
+    }
+    .runner-pulse {
+      animation: pulse-ring 1.6s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+    }
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(15, 23, 42, 0.6);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(100, 116, 139, 0.5);
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(148, 163, 184, 0.8);
+    }
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.82);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 w-screen h-screen flex flex-col antialiased">
+
+  <header class="h-14 px-4 sm:px-6 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between z-30 shrink-0">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center shadow-lg shadow-orange-500/20 text-slate-950 font-bold">
+        <i class="fa-solid fa-person-running text-lg"></i>
+      </div>
+      <div>
+        <h1 class="font-bold text-sm sm:text-base leading-tight text-white flex items-center gap-2">
+          <span>DM Fitness &rarr; Lempuyangan Loop</span>
+          <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400 border border-orange-500/30">10.8 km</span>
+        </h1>
+        <p class="text-[11px] text-slate-400 hidden sm:block">Yogyakarta Running Route Guide &bull; 3D Flyover & Navigation</p>
+      </div>
+    </div>
+
+    <!-- Right Header Tools -->
+    <div class="flex items-center gap-2 sm:gap-3">
+      <!-- Layer Selector -->
+      <div class="flex bg-slate-800/90 rounded-lg p-0.5 border border-slate-700 text-xs">
+        <button id="layer-sat" onclick="setMapLayer('satellite')" class="px-2.5 py-1.5 rounded-md font-medium text-white bg-slate-700 transition flex items-center gap-1.5 shadow-sm">
+          <i class="fa-solid fa-satellite"></i>
+          <span class="hidden md:inline">Satellite</span>
+        </button>
+        <button id="layer-dark" onclick="setMapLayer('dark')" class="px-2.5 py-1.5 rounded-md font-medium text-slate-400 hover:text-white transition flex items-center gap-1.5">
+          <i class="fa-solid fa-moon"></i>
+          <span class="hidden md:inline">Dark</span>
+        </button>
+        <button id="layer-osm" onclick="setMapLayer('osm')" class="px-2.5 py-1.5 rounded-md font-medium text-slate-400 hover:text-white transition flex items-center gap-1.5">
+          <i class="fa-solid fa-map"></i>
+          <span class="hidden md:inline">Streets</span>
+        </button>
+      </div>
+
+      <!-- Turn Cue Sheet Toggle -->
+      <button onclick="toggleCueSheet()" class="h-9 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-2 transition">
+        <i class="fa-solid fa-list-ol text-orange-400"></i>
+        <span class="hidden sm:inline">Turn Directions</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="relative flex-1 w-full h-full overflow-hidden">
+    
+    <!-- 3D Perspective Map Viewport -->
+    <div id="map-viewport" class="w-full h-full mode-3d-drone">
+      <div id="map" class="w-full h-full"></div>
+    </div>
+
+    <!-- HUD OVERLAY: Turn-by-Turn Floating Direction Box (Top Left) -->
+    <div class="absolute top-4 left-4 z-20 w-80 sm:w-88 glass-panel rounded-2xl p-4 shadow-2xl transition-all duration-300 pointer-events-auto">
+      <div class="flex items-start gap-3.5">
+        <div id="nav-turn-icon-bg" class="w-12 h-12 rounded-xl bg-orange-500/20 border border-orange-500/40 text-orange-400 flex items-center justify-center shrink-0 text-2xl shadow-inner">
+          <i id="nav-turn-icon" class="fa-solid fa-arrow-up"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center justify-between">
+            <span id="nav-distance-callout" class="text-xs uppercase font-extrabold tracking-wider text-orange-400 font-mono">In 0 m</span>
+            <span id="nav-speed-badge" class="text-[10px] bg-slate-800/90 text-slate-300 px-2 py-0.5 rounded border border-slate-700">Target: 5:45 /km</span>
+          </div>
+          <h2 id="nav-instruction" class="text-base font-bold text-white truncate mt-0.5 leading-tight">Start at DM Fitness</h2>
+          <p id="nav-subinstruction" class="text-xs text-slate-400 truncate mt-0.5">Head north towards Jl. Veteran</p>
+        </div>
+      </div>
+
+      <!-- Realtime Progress Stats -->
+      <div class="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-slate-700/60 text-center font-mono">
+        <div class="bg-slate-900/60 p-2 rounded-xl border border-slate-800">
+          <span class="text-[10px] text-slate-400 block uppercase font-sans font-medium">Distance</span>
+          <span id="stat-dist" class="text-sm font-bold text-white">0.00 <span class="text-[10px] text-slate-400">km</span></span>
+        </div>
+        <div class="bg-slate-900/60 p-2 rounded-xl border border-slate-800">
+          <span class="text-[10px] text-slate-400 block uppercase font-sans font-medium">Elevation</span>
+          <span id="stat-ele" class="text-sm font-bold text-emerald-400">104 <span class="text-[10px] text-slate-400">m</span></span>
+        </div>
+        <div class="bg-slate-900/60 p-2 rounded-xl border border-slate-800">
+          <span class="text-[10px] text-slate-400 block uppercase font-sans font-medium">Remaining</span>
+          <span id="stat-remain" class="text-sm font-bold text-orange-400">10.8 <span class="text-[10px] text-slate-400">km</span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- FLOATING COMPASS & CAMERA MODE SWITCHER (Top Right) -->
+    <div class="absolute top-4 right-4 z-20 flex flex-col items-end gap-2.5">
+      <!-- Heading Compass -->
+      <div class="glass-panel p-2.5 rounded-2xl flex items-center gap-3 shadow-xl">
+        <div class="relative w-10 h-10 flex items-center justify-center">
+          <div id="compass-rose" class="w-full h-full rounded-full border border-slate-700 flex items-center justify-center transition-transform duration-200">
+            <i class="fa-solid fa-location-arrow text-orange-500 text-lg"></i>
+          </div>
+        </div>
+        <div class="pr-1 text-right font-mono">
+          <span class="text-[10px] uppercase text-slate-400 block font-sans">Heading</span>
+          <span id="stat-bearing" class="text-xs font-bold text-white">355&deg; N</span>
+        </div>
+      </div>
+
+      <!-- Camera Perspective Toggles -->
+      <div class="glass-panel p-1.5 rounded-xl flex flex-col gap-1 shadow-xl">
+        <button id="cam-pov" onclick="setCameraMode('pov')" title="First Person POV (Runner Chasing Angle)" class="p-2 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-2 text-xs font-semibold">
+          <i class="fa-solid fa-eye w-4 text-center"></i>
+          <span class="hidden sm:inline">Runner POV</span>
+        </button>
+        <button id="cam-drone" onclick="setCameraMode('drone')" title="Drone 3D Angle" class="p-2 rounded-lg text-orange-400 bg-orange-500/20 border border-orange-500/40 transition flex items-center gap-2 text-xs font-semibold">
+          <i class="fa-solid fa-plane-up w-4 text-center"></i>
+          <span class="hidden sm:inline">Drone 3D</span>
+        </button>
+        <button id="cam-2d" onclick="setCameraMode('2d')" title="2D Flat Map" class="p-2 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-2 text-xs font-semibold">
+          <i class="fa-solid fa-map-location-dot w-4 text-center"></i>
+          <span class="hidden sm:inline">2D Top-Down</span>
+        </button>
+      </div>
+
+      <!-- Quick Action: Fit Entire Route -->
+      <button onclick="fitRouteBounds()" class="glass-panel p-2.5 rounded-xl text-slate-300 hover:text-white hover:border-slate-500 transition shadow-xl flex items-center gap-2 text-xs font-medium">
+        <i class="fa-solid fa-expand text-orange-400"></i>
+        <span class="hidden sm:inline">Fit Full Route</span>
+      </button>
+    </div>
+
+    <!-- SIDEBAR: Turn-by-Turn Cue List (Slide-out) -->
+    <div id="cue-sheet-drawer" class="absolute top-0 right-0 bottom-0 z-30 w-80 sm:w-96 glass-panel translate-x-full transition-transform duration-300 shadow-2xl flex flex-col border-l border-slate-700">
+      <div class="p-4 border-b border-slate-700/80 flex items-center justify-between bg-slate-900/60">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-signs-post text-orange-400"></i>
+          <h3 class="font-bold text-white text-sm">Turn-by-Turn Route Cues</h3>
+        </div>
+        <button onclick="toggleCueSheet()" class="text-slate-400 hover:text-white w-7 h-7 rounded-lg hover:bg-slate-800 flex items-center justify-center">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div id="cue-list-container" class="flex-1 overflow-y-auto p-3 space-y-2 text-xs">
+        <!-- Injected via JS -->
+      </div>
+
+      <div class="p-3 bg-slate-900/80 border-t border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
+        <span>Click any step to jump</span>
+        <span class="text-orange-400 font-semibold font-mono">10.82 km Total</span>
+      </div>
+    </div>
+
+    <div class="absolute bottom-4 left-4 right-4 z-20 flex flex-col gap-2 max-w-5xl mx-auto pointer-events-none">
+      
+      <!-- Interactive Elevation Chart Strip -->
+      <div class="glass-panel rounded-2xl p-3 shadow-2xl pointer-events-auto border border-slate-700/60">
+        <div class="flex items-center justify-between mb-1.5 text-[11px] text-slate-400">
+          <span class="font-medium flex items-center gap-1.5 text-slate-300">
+            <i class="fa-solid fa-chart-area text-emerald-400"></i> Elevation Profile (Jogja Elevation Trend)
+          </span>
+          <span class="font-mono text-emerald-400 text-xs font-semibold" id="elevation-hover-label">Current: 104.6m (Gain: +82m)</span>
+        </div>
+        
+        <!-- SVG Elevation Graph -->
+        <div class="relative w-full h-16 cursor-crosshair" id="elevation-container">
+          <svg id="elevation-svg" class="w-full h-full overflow-visible" preserveAspectRatio="none">
+            <!-- Gradients -->
+            <defs>
+              <linearGradient id="ele-grad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#10b981" stop-opacity="0.45"/>
+                <stop offset="100%" stop-color="#10b981" stop-opacity="0.0"/>
+              </linearGradient>
+            </defs>
+            <!-- Elevation Filled Area -->
+            <path id="ele-area" fill="url(#ele-grad)" d=""></path>
+            <!-- Elevation Stroke Line -->
+            <path id="ele-line" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" d=""></path>
+            <!-- Runner Current Marker Line on Profile -->
+            <line id="ele-marker-line" x1="0" y1="0" x2="0" y2="100%" stroke="#f97316" stroke-width="2.5" stroke-dasharray="2,2"></line>
+            <circle id="ele-marker-dot" cx="0" cy="0" r="4.5" fill="#f97316" stroke="#ffffff" stroke-width="2"></circle>
+          </svg>
+        </div>
+      </div>
+
+      <!-- Media & Animation Transport Controls -->
+      <div class="glass-panel rounded-2xl p-3 sm:p-4 shadow-2xl pointer-events-auto flex flex-col gap-2.5">
+        
+        <!-- Timeline Range Scrubber -->
+        <div class="flex items-center gap-3">
+          <span id="time-current" class="text-xs font-mono font-bold text-orange-400 w-12 text-right">00:00</span>
+          <div class="relative flex-1 flex items-center">
+            <input id="route-scrubber" type="range" min="0" max="100" value="0" step="0.1" 
+                   oninput="onScrubProgress(this.value)"
+                   class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-orange-500 focus:outline-none">
+          </div>
+          <span id="time-total" class="text-xs font-mono text-slate-400 w-12">01:02:15</span>
+        </div>
+
+        <!-- Buttons Row -->
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          
+          <!-- Left playback buttons -->
+          <div class="flex items-center gap-2">
+            <button onclick="resetAnimation()" title="Reset to start" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center transition border border-slate-700">
+              <i class="fa-solid fa-backward-step"></i>
+            </button>
+            <button id="play-btn" onclick="togglePlayPause()" class="h-10 px-5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-400 hover:to-amber-400 text-slate-950 font-bold flex items-center gap-2 shadow-lg shadow-orange-500/25 transition">
+              <i id="play-btn-icon" class="fa-solid fa-play"></i>
+              <span id="play-btn-text">Start Flyover</span>
+            </button>
+            <button onclick="stepForward(10)" title="Skip 10 seconds ahead" class="w-9 h-9 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center transition border border-slate-700">
+              <i class="fa-solid fa-forward-step"></i>
+            </button>
+          </div>
+
+          <!-- Speed multipliers -->
+          <div class="flex items-center gap-1 bg-slate-900/90 rounded-xl p-1 border border-slate-800 text-xs">
+            <span class="text-[10px] uppercase font-bold text-slate-500 px-2">Speed</span>
+            <button onclick="setSpeed(1)" id="spd-1" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition">1x</button>
+            <button onclick="setSpeed(2)" id="spd-2" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition">2x</button>
+            <button onclick="setSpeed(4)" id="spd-4" class="px-2.5 py-1 rounded-lg font-bold text-white bg-orange-500/30 border border-orange-500/50 shadow-sm transition">4x</button>
+            <button onclick="setSpeed(8)" id="spd-8" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition">8x</button>
+            <button onclick="setSpeed(16)" id="spd-16" class="px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition">16x</button>
+          </div>
+
+          <!-- Quick Navigation Landmarks shortcuts -->
+          <div class="hidden lg:flex items-center gap-1.5 text-xs text-slate-400">
+            <span class="text-[10px] uppercase font-bold text-slate-500">Waypoints:</span>
+            <button onclick="jumpToKm(0)" class="hover:text-white px-2 py-1 rounded bg-slate-800/60 hover:bg-slate-700">Start (DM)</button>
+            <button onclick="jumpToKm(3.2)" class="hover:text-white px-2 py-1 rounded bg-slate-800/60 hover:bg-slate-700">Lempuyangan</button>
+            <button onclick="jumpToKm(6.5)" class="hover:text-white px-2 py-1 rounded bg-slate-800/60 hover:bg-slate-700">Malioboro Grid</button>
+            <button onclick="jumpToKm(10.8)" class="hover:text-white px-2 py-1 rounded bg-slate-800/60 hover:bg-slate-700">Finish</button>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <script>
+    // Raw Trackpoints parsed from provided GPX file
+    const RAW_GPX_POINTS = [
+      {"lat": -7.802057, "lon": 110.39523, "ele": 104.65},
+      {"lat": -7.801923, "lon": 110.395269, "ele": 105.44},
+      {"lat": -7.800445, "lon": 110.395397, "ele": 105.85},
+      {"lat": -7.800526, "lon": 110.395967, "ele": 106.02},
+      {"lat": -7.799046, "lon": 110.396098, "ele": 106.00},
+      {"lat": -7.799027, "lon": 110.396088, "ele": 106.00},
+      {"lat": -7.798951, "lon": 110.395602, "ele": 107.05},
+      {"lat": -7.798942, "lon": 110.395589, "ele": 107.13},
+      {"lat": -7.79827, "lon": 110.395651, "ele": 108.19},
+      {"lat": -7.798183, "lon": 110.395652, "ele": 108.22},
+      {"lat": -7.798136, "lon": 110.395665, "ele": 108.31},
+      {"lat": -7.797819, "lon": 110.395298, "ele": 108.92},
+      {"lat": -7.797672, "lon": 110.395143, "ele": 109.00},
+      {"lat": -7.797152, "lon": 110.394556, "ele": 110.00},
+      {"lat": -7.796953, "lon": 110.394306, "ele": 110.00},
+      {"lat": -7.796806, "lon": 110.39432, "ele": 110.00},
+      {"lat": -7.796577, "lon": 110.39371, "ele": 110.19},
+      {"lat": -7.796351, "lon": 110.392661, "ele": 110.86},
+      {"lat": -7.796269, "lon": 110.392157, "ele": 110.00},
+      {"lat": -7.79618, "lon": 110.391697, "ele": 110.11},
+      {"lat": -7.796147, "lon": 110.391591, "ele": 110.59},
+      {"lat": -7.795992, "lon": 110.391343, "ele": 111.82},
+      {"lat": -7.795683, "lon": 110.390849, "ele": 110.34},
+      {"lat": -7.795531, "lon": 110.390592, "ele": 110.00},
+      {"lat": -7.795452, "lon": 110.390479, "ele": 110.35},
+      {"lat": -7.795154, "lon": 110.389974, "ele": 113.38},
+      {"lat": -7.795063, "lon": 110.389828, "ele": 112.62},
+      {"lat": -7.794829, "lon": 110.389412, "ele": 111.00},
+      {"lat": -7.794753, "lon": 110.389299, "ele": 111.00},
+      {"lat": -7.794626, "lon": 110.38903, "ele": 110.74},
+      {"lat": -7.79453, "lon": 110.388778, "ele": 110.18},
+      {"lat": -7.794487, "lon": 110.388585, "ele": 110.80},
+      {"lat": -7.794351, "lon": 110.387795, "ele": 113.00},
+      {"lat": -7.794178, "lon": 110.386857, "ele": 113.00},
+      {"lat": -7.794054, "lon": 110.3859, "ele": 113.33},
+      {"lat": -7.794015, "lon": 110.385683, "ele": 113.00},
+      {"lat": -7.793933, "lon": 110.385015, "ele": 113.33},
+      {"lat": -7.793929, "lon": 110.384923, "ele": 113.45},
+      {"lat": -7.793904, "lon": 110.384727, "ele": 114.00},
+      {"lat": -7.793625, "lon": 110.38364, "ele": 114.47},
+      {"lat": -7.793335, "lon": 110.382551, "ele": 114.00},
+      {"lat": -7.793186, "lon": 110.381683, "ele": 113.71},
+      {"lat": -7.793049, "lon": 110.380969, "ele": 112.51},
+      {"lat": -7.792701, "lon": 110.380961, "ele": 113.00},
+      {"lat": -7.792686, "lon": 110.380534, "ele": 113.43},
+      {"lat": -7.792399, "lon": 110.380519, "ele": 114.00},
+      {"lat": -7.792327, "lon": 110.380522, "ele": 114.00},
+      {"lat": -7.792306, "lon": 110.380274, "ele": 113.82},
+      {"lat": -7.792264, "lon": 110.379778, "ele": 110.00},
+      {"lat": -7.792261, "lon": 110.379694, "ele": 110.00},
+      {"lat": -7.792279, "lon": 110.379623, "ele": 110.00},
+      {"lat": -7.792368, "lon": 110.379412, "ele": 111.29},
+      {"lat": -7.792336, "lon": 110.378764, "ele": 114.97},
+      {"lat": -7.792276, "lon": 110.377921, "ele": 117.01},
+      {"lat": -7.792171, "lon": 110.377914, "ele": 117.06},
+      {"lat": -7.791924, "lon": 110.377988, "ele": 117.41},
+      {"lat": -7.791583, "lon": 110.378011, "ele": 116.00},
+      {"lat": -7.791084, "lon": 110.378039, "ele": 117.83},
+      {"lat": -7.790818, "lon": 110.378068, "ele": 117.99},
+      {"lat": -7.790393, "lon": 110.37814, "ele": 116.41},
+      {"lat": -7.790237, "lon": 110.378026, "ele": 116.00},
+      {"lat": -7.790222, "lon": 110.37791, "ele": 116.00},
+      {"lat": -7.79022, "lon": 110.37791, "ele": 116.00},
+      {"lat": -7.79023, "lon": 110.3776, "ele": 116.20},
+      {"lat": -7.79025, "lon": 110.37733, "ele": 116.30},
+      {"lat": -7.79026, "lon": 110.3771, "ele": 116.40},
+      {"lat": -7.79028, "lon": 110.37692, "ele": 116.45},
+      {"lat": -7.79029, "lon": 110.37681, "ele": 116.50},
+      {"lat": -7.79045, "lon": 110.37453, "ele": 117.00},
+      {"lat": -7.79045, "lon": 110.37442, "ele": 117.00},
+      {"lat": -7.79044, "lon": 110.37422, "ele": 117.00},
+      {"lat": -7.79061, "lon": 110.37406, "ele": 116.80},
+      {"lat": -7.79071, "lon": 110.37406, "ele": 116.80},
+      {"lat": -7.79098, "lon": 110.37401, "ele": 116.70},
+      {"lat": -7.79141, "lon": 110.37387, "ele": 116.50},
+      {"lat": -7.79182, "lon": 110.37373, "ele": 116.20},
+      {"lat": -7.79194, "lon": 110.37368, "ele": 116.00},
+      {"lat": -7.79211, "lon": 110.37362, "ele": 115.80},
+      {"lat": -7.79346, "lon": 110.37314, "ele": 114.50},
+      {"lat": -7.79368, "lon": 110.37306, "ele": 114.20},
+      {"lat": -7.79415, "lon": 110.37289, "ele": 113.90},
+      {"lat": -7.79418, "lon": 110.37288, "ele": 113.80},
+      {"lat": -7.79478, "lon": 110.37272, "ele": 113.40},
+      {"lat": -7.79486, "lon": 110.3727, "ele": 113.30},
+      {"lat": -7.79554, "lon": 110.37269, "ele": 113.00},
+      {"lat": -7.79621, "lon": 110.37268, "ele": 112.50},
+      {"lat": -7.79659, "lon": 110.37266, "ele": 112.20},
+      {"lat": -7.79684, "lon": 110.37265, "ele": 112.00},
+      {"lat": -7.7974, "lon": 110.37262, "ele": 111.70},
+      {"lat": -7.79756, "lon": 110.37263, "ele": 111.50},
+      {"lat": -7.79763, "lon": 110.37265, "ele": 111.40},
+      {"lat": -7.79768, "lon": 110.37267, "ele": 111.30},
+      {"lat": -7.79774, "lon": 110.37272, "ele": 111.20},
+      {"lat": -7.79782, "lon": 110.37278, "ele": 111.10},
+      {"lat": -7.79786, "lon": 110.37282, "ele": 111.00},
+      {"lat": -7.79796, "lon": 110.37288, "ele": 110.90},
+      {"lat": -7.79805, "lon": 110.37293, "ele": 110.80},
+      {"lat": -7.7983, "lon": 110.37302, "ele": 110.50},
+      {"lat": -7.79855, "lon": 110.37308, "ele": 110.20},
+      {"lat": -7.79872, "lon": 110.37311, "ele": 110.00},
+      {"lat": -7.79949, "lon": 110.37313, "ele": 109.50},
+      {"lat": -7.79969, "lon": 110.37313, "ele": 109.30},
+      {"lat": -7.80016, "lon": 110.37314, "ele": 109.00},
+      {"lat": -7.80026, "lon": 110.37313, "ele": 108.90},
+      {"lat": -7.80083, "lon": 110.37313, "ele": 108.50},
+      {"lat": -7.80136, "lon": 110.37311, "ele": 108.00},
+      {"lat": -7.80159, "lon": 110.37309, "ele": 107.80},
+      {"lat": -7.80158, "lon": 110.37272, "ele": 107.70},
+      {"lat": -7.80158, "lon": 110.37262, "ele": 107.60},
+      {"lat": -7.80158, "lon": 110.37252, "ele": 107.50},
+      {"lat": -7.80157, "lon": 110.37178, "ele": 107.00},
+      {"lat": -7.80156, "lon": 110.37142, "ele": 106.80},
+      {"lat": -7.80156, "lon": 110.37141, "ele": 106.80},
+      {"lat": -7.80156, "lon": 110.37106, "ele": 106.50},
+      {"lat": -7.80155, "lon": 110.37094, "ele": 106.40},
+      {"lat": -7.80153, "lon": 110.3709, "ele": 106.30},
+      {"lat": -7.80153, "lon": 110.37088, "ele": 106.30},
+      {"lat": -7.80153, "lon": 110.37084, "ele": 106.30},
+      {"lat": -7.80153, "lon": 110.3707, "ele": 106.20},
+      {"lat": -7.80152, "lon": 110.37028, "ele": 106.00},
+      {"lat": -7.80151, "lon": 110.36934, "ele": 105.50},
+      {"lat": -7.80151, "lon": 110.36927, "ele": 105.40},
+      {"lat": -7.80152, "lon": 110.36928, "ele": 105.40},
+      {"lat": -7.80151, "lon": 110.36927, "ele": 105.40},
+      {"lat": -7.8008, "lon": 110.36929, "ele": 105.80},
+      {"lat": -7.8005, "lon": 110.3693, "ele": 106.00},
+      {"lat": -7.80038, "lon": 110.36931, "ele": 106.10},
+      {"lat": -7.80016, "lon": 110.36931, "ele": 106.20},
+      {"lat": -7.79988, "lon": 110.36932, "ele": 106.40},
+      {"lat": -7.79958, "lon": 110.36933, "ele": 106.60},
+      {"lat": -7.79937, "lon": 110.36934, "ele": 106.80},
+      {"lat": -7.79885, "lon": 110.36936, "ele": 107.00},
+      {"lat": -7.79884, "lon": 110.36936, "ele": 107.00},
+      {"lat": -7.79831, "lon": 110.36937, "ele": 107.40},
+      {"lat": -7.79793, "lon": 110.36935, "ele": 107.70},
+      {"lat": -7.79771, "lon": 110.36935, "ele": 107.80},
+      {"lat": -7.79761, "lon": 110.36935, "ele": 107.90},
+      {"lat": -7.79734, "lon": 110.36934, "ele": 108.10},
+      {"lat": -7.79714, "lon": 110.36933, "ele": 108.30},
+      {"lat": -7.79708, "lon": 110.36932, "ele": 108.40},
+      {"lat": -7.797, "lon": 110.3693, "ele": 108.50},
+      {"lat": -7.79692, "lon": 110.36927, "ele": 108.60},
+      {"lat": -7.79683, "lon": 110.36921, "ele": 108.70},
+      {"lat": -7.7968, "lon": 110.36919, "ele": 108.80},
+      {"lat": -7.79667, "lon": 110.3691, "ele": 109.00},
+      {"lat": -7.79666, "lon": 110.369, "ele": 109.10},
+      {"lat": -7.79661, "lon": 110.36839, "ele": 109.50},
+      {"lat": -7.7966, "lon": 110.36824, "ele": 109.60},
+      {"lat": -7.79656, "lon": 110.36776, "ele": 110.00},
+      {"lat": -7.79655, "lon": 110.36769, "ele": 110.00},
+      {"lat": -7.79654, "lon": 110.3675, "ele": 110.10},
+      {"lat": -7.79648, "lon": 110.36685, "ele": 110.50},
+      {"lat": -7.79637, "lon": 110.36546, "ele": 111.00},
+      {"lat": -7.79637, "lon": 110.36544, "ele": 111.00},
+      {"lat": -7.79636, "lon": 110.36538, "ele": 111.00},
+      {"lat": -7.79744, "lon": 110.36526, "ele": 110.20},
+      {"lat": -7.79756, "lon": 110.36524, "ele": 110.10},
+      {"lat": -7.79835, "lon": 110.36514, "ele": 109.50},
+      {"lat": -7.79883, "lon": 110.36507, "ele": 109.00},
+      {"lat": -7.79907, "lon": 110.36504, "ele": 108.80},
+      {"lat": -7.79907, "lon": 110.36505, "ele": 108.80},
+      {"lat": -7.79907, "lon": 110.36504, "ele": 108.80},
+      {"lat": -7.79935, "lon": 110.36501, "ele": 108.60},
+      {"lat": -7.79949, "lon": 110.36499, "ele": 108.50},
+      {"lat": -7.79967, "lon": 110.36496, "ele": 108.30},
+      {"lat": -7.8002, "lon": 110.3649, "ele": 108.00},
+      {"lat": -7.80024, "lon": 110.36489, "ele": 107.90},
+      {"lat": -7.80076, "lon": 110.36483, "ele": 107.50},
+      {"lat": -7.80088, "lon": 110.36481, "ele": 107.40},
+      {"lat": -7.80108, "lon": 110.36479, "ele": 107.20},
+      {"lat": -7.80137, "lon": 110.36475, "ele": 107.00},
+      {"lat": -7.80137, "lon": 110.36457, "ele": 107.00},
+      {"lat": -7.80137, "lon": 110.36445, "ele": 107.00},
+      {"lat": -7.80133, "lon": 110.36349, "ele": 107.20},
+      {"lat": -7.80132, "lon": 110.36333, "ele": 107.30},
+      {"lat": -7.8013, "lon": 110.36251, "ele": 107.60},
+      {"lat": -7.80129, "lon": 110.36242, "ele": 107.70},
+      {"lat": -7.80128, "lon": 110.36216, "ele": 107.80},
+      {"lat": -7.80128, "lon": 110.36205, "ele": 107.90},
+      {"lat": -7.80128, "lon": 110.36203, "ele": 107.90},
+      {"lat": -7.8011, "lon": 110.36203, "ele": 108.00},
+      {"lat": -7.80097, "lon": 110.36204, "ele": 108.10},
+      {"lat": -7.80048, "lon": 110.36205, "ele": 108.40},
+      {"lat": -7.80003, "lon": 110.36207, "ele": 108.80},
+      {"lat": -7.79952, "lon": 110.36209, "ele": 109.10},
+      {"lat": -7.79917, "lon": 110.3621, "ele": 109.40},
+      {"lat": -7.79845, "lon": 110.36214, "ele": 110.00},
+      {"lat": -7.79784, "lon": 110.36214, "ele": 110.50},
+      {"lat": -7.79764, "lon": 110.36214, "ele": 110.70},
+      {"lat": -7.79717, "lon": 110.36215, "ele": 111.00},
+      {"lat": -7.79682, "lon": 110.36217, "ele": 111.30},
+      {"lat": -7.79671, "lon": 110.36217, "ele": 111.40},
+      {"lat": -7.79649, "lon": 110.36217, "ele": 111.50},
+      {"lat": -7.79626, "lon": 110.36214, "ele": 111.80},
+      {"lat": -7.79622, "lon": 110.36213, "ele": 111.90},
+      {"lat": -7.79616, "lon": 110.3621, "ele": 112.00},
+      {"lat": -7.7961, "lon": 110.36205, "ele": 112.10},
+      {"lat": -7.79607, "lon": 110.36201, "ele": 112.20},
+      {"lat": -7.79599, "lon": 110.36189, "ele": 112.40},
+      {"lat": -7.79592, "lon": 110.36177, "ele": 112.60},
+      {"lat": -7.7957, "lon": 110.36148, "ele": 113.00},
+      {"lat": -7.79568, "lon": 110.36146, "ele": 113.00},
+      {"lat": -7.79559, "lon": 110.36135, "ele": 113.20},
+      {"lat": -7.79547, "lon": 110.36126, "ele": 113.50},
+      {"lat": -7.79543, "lon": 110.36124, "ele": 113.60},
+      {"lat": -7.79538, "lon": 110.36123, "ele": 113.70},
+      {"lat": -7.79485, "lon": 110.36126, "ele": 114.20},
+      {"lat": -7.79463, "lon": 110.36127, "ele": 114.50},
+      {"lat": -7.79427, "lon": 110.36128, "ele": 115.00},
+      {"lat": -7.79426, "lon": 110.36128, "ele": 115.00},
+      {"lat": -7.79405, "lon": 110.36129, "ele": 115.30},
+      {"lat": -7.7937, "lon": 110.3613, "ele": 115.60},
+      {"lat": -7.79351, "lon": 110.36131, "ele": 115.80},
+      {"lat": -7.79331, "lon": 110.36136, "ele": 116.00},
+      {"lat": -7.79286, "lon": 110.36145, "ele": 116.50},
+      {"lat": -7.79161, "lon": 110.3617, "ele": 117.50},
+      {"lat": -7.79156, "lon": 110.36171, "ele": 117.50},
+      {"lat": -7.79153, "lon": 110.36116, "ele": 117.70},
+      {"lat": -7.79152, "lon": 110.36086, "ele": 117.80},
+      {"lat": -7.7915, "lon": 110.36047, "ele": 118.00},
+      {"lat": -7.79149, "lon": 110.36037, "ele": 118.10},
+      {"lat": -7.79145, "lon": 110.35961, "ele": 118.50},
+      {"lat": -7.79143, "lon": 110.35927, "ele": 118.70},
+      {"lat": -7.79142, "lon": 110.35904, "ele": 118.80},
+      {"lat": -7.79141, "lon": 110.35895, "ele": 118.90},
+      {"lat": -7.79141, "lon": 110.35894, "ele": 118.90},
+      {"lat": -7.7914, "lon": 110.35878, "ele": 119.00},
+      {"lat": -7.79137, "lon": 110.35833, "ele": 119.20},
+      {"lat": -7.79136, "lon": 110.35795, "ele": 119.40},
+      {"lat": -7.79135, "lon": 110.35786, "ele": 119.50},
+      {"lat": -7.79133, "lon": 110.35747, "ele": 119.70},
+      {"lat": -7.79133, "lon": 110.35736, "ele": 119.80},
+      {"lat": -7.79136, "lon": 110.35734, "ele": 119.80},
+      {"lat": -7.79133, "lon": 110.35736, "ele": 119.80},
+      {"lat": -7.79118, "lon": 110.3574, "ele": 120.00},
+      {"lat": -7.79111, "lon": 110.35741, "ele": 120.00},
+      {"lat": -7.79034, "lon": 110.35743, "ele": 120.30},
+      {"lat": -7.78943, "lon": 110.3575, "ele": 120.60},
+      {"lat": -7.78935, "lon": 110.35748, "ele": 120.60},
+      {"lat": -7.78888, "lon": 110.35749, "ele": 120.70},
+      {"lat": -7.78872, "lon": 110.35749, "ele": 120.80},
+      {"lat": -7.78869, "lon": 110.35749, "ele": 120.80},
+      {"lat": -7.78829, "lon": 110.35751, "ele": 120.90},
+      {"lat": -7.78827, "lon": 110.35751, "ele": 120.90},
+      {"lat": -7.78821, "lon": 110.35754, "ele": 120.90},
+      {"lat": -7.78818, "lon": 110.35758, "ele": 120.90},
+      {"lat": -7.78816, "lon": 110.35764, "ele": 120.90},
+      {"lat": -7.78816, "lon": 110.35767, "ele": 120.90},
+      {"lat": -7.78798, "lon": 110.35835, "ele": 120.70},
+      {"lat": -7.78787, "lon": 110.3587, "ele": 120.50},
+      {"lat": -7.78787, "lon": 110.35871, "ele": 120.50},
+      {"lat": -7.78782, "lon": 110.35881, "ele": 120.40},
+      {"lat": -7.78772, "lon": 110.35898, "ele": 120.30},
+      {"lat": -7.78757, "lon": 110.35917, "ele": 120.20},
+      {"lat": -7.78749, "lon": 110.35927, "ele": 120.10},
+      {"lat": -7.78745, "lon": 110.35931, "ele": 120.00},
+      {"lat": -7.78751, "lon": 110.35931, "ele": 120.00},
+      {"lat": -7.78757, "lon": 110.35932, "ele": 120.00},
+      {"lat": -7.78762, "lon": 110.35935, "ele": 120.00},
+      {"lat": -7.78766, "lon": 110.35939, "ele": 120.00},
+      {"lat": -7.78768, "lon": 110.35945, "ele": 120.00},
+      {"lat": -7.78769, "lon": 110.35949, "ele": 120.00},
+      {"lat": -7.78768, "lon": 110.35954, "ele": 120.00},
+      {"lat": -7.78766, "lon": 110.35958, "ele": 120.00},
+      {"lat": -7.78763, "lon": 110.35963, "ele": 120.00},
+      {"lat": -7.78761, "lon": 110.35964, "ele": 120.00},
+      {"lat": -7.78763, "lon": 110.35963, "ele": 120.00},
+      {"lat": -7.78766, "lon": 110.35958, "ele": 120.00},
+      {"lat": -7.78773, "lon": 110.35974, "ele": 120.00},
+      {"lat": -7.78774, "lon": 110.35981, "ele": 120.00},
+      {"lat": -7.78805, "lon": 110.36116, "ele": 119.80},
+      {"lat": -7.78808, "lon": 110.36151, "ele": 119.70},
+      {"lat": -7.78808, "lon": 110.36153, "ele": 119.70},
+      {"lat": -7.78817, "lon": 110.36244, "ele": 119.50},
+      {"lat": -7.78778, "lon": 110.36252, "ele": 119.60},
+      {"lat": -7.78769, "lon": 110.36254, "ele": 119.70},
+      {"lat": -7.78719, "lon": 110.36265, "ele": 120.00},
+      {"lat": -7.78712, "lon": 110.36204, "ele": 120.10},
+      {"lat": -7.78706, "lon": 110.36165, "ele": 120.20},
+      {"lat": -7.78706, "lon": 110.36162, "ele": 120.20},
+      {"lat": -7.78692, "lon": 110.36059, "ele": 120.40},
+      {"lat": -7.78689, "lon": 110.36042, "ele": 120.50},
+      {"lat": -7.78681, "lon": 110.36001, "ele": 120.70},
+      {"lat": -7.78681, "lon": 110.36, "ele": 120.70},
+      {"lat": -7.78681, "lon": 110.36001, "ele": 120.70},
+      {"lat": -7.78679, "lon": 110.35995, "ele": 120.70},
+      {"lat": -7.78715, "lon": 110.35974, "ele": 120.60},
+      {"lat": -7.78723, "lon": 110.35972, "ele": 120.60},
+      {"lat": -7.78752, "lon": 110.35968, "ele": 120.50},
+      {"lat": -7.78758, "lon": 110.35966, "ele": 120.50},
+      {"lat": -7.78752, "lon": 110.35968, "ele": 120.50},
+      {"lat": -7.78723, "lon": 110.35972, "ele": 120.60},
+      {"lat": -7.78715, "lon": 110.35974, "ele": 120.60},
+      {"lat": -7.78679, "lon": 110.35995, "ele": 120.70},
+      {"lat": -7.78677, "lon": 110.35996, "ele": 120.70},
+      {"lat": -7.78671, "lon": 110.36, "ele": 120.80},
+      {"lat": -7.78648, "lon": 110.36014, "ele": 120.90},
+      {"lat": -7.78614, "lon": 110.36033, "ele": 121.00},
+      {"lat": -7.78574, "lon": 110.36053, "ele": 121.00},
+      {"lat": -7.78542, "lon": 110.3607, "ele": 121.00},
+      {"lat": -7.78544, "lon": 110.36074, "ele": 121.00},
+      {"lat": -7.78544, "lon": 110.36075, "ele": 121.00},
+      {"lat": -7.78545, "lon": 110.36081, "ele": 121.00},
+      {"lat": -7.78555, "lon": 110.36137, "ele": 120.80},
+      {"lat": -7.78562, "lon": 110.36178, "ele": 120.70},
+      {"lat": -7.78564, "lon": 110.3619, "ele": 120.60},
+      {"lat": -7.78568, "lon": 110.36216, "ele": 120.50},
+      {"lat": -7.78569, "lon": 110.36223, "ele": 120.50},
+      {"lat": -7.78574, "lon": 110.36257, "ele": 120.30},
+      {"lat": -7.7858, "lon": 110.36286, "ele": 120.20},
+      {"lat": -7.78581, "lon": 110.36294, "ele": 120.20},
+      {"lat": -7.78561, "lon": 110.36298, "ele": 120.30},
+      {"lat": -7.78529, "lon": 110.36305, "ele": 120.50},
+      {"lat": -7.78504, "lon": 110.36312, "ele": 120.70},
+      {"lat": -7.78505, "lon": 110.36315, "ele": 120.70},
+      {"lat": -7.7851, "lon": 110.36361, "ele": 120.60},
+      {"lat": -7.78512, "lon": 110.36377, "ele": 120.60},
+      {"lat": -7.78518, "lon": 110.3642, "ele": 120.50},
+      {"lat": -7.78519, "lon": 110.36428, "ele": 120.50},
+      {"lat": -7.78521, "lon": 110.36444, "ele": 120.50},
+      {"lat": -7.78525, "lon": 110.36483, "ele": 120.60},
+      {"lat": -7.7853, "lon": 110.36519, "ele": 120.70},
+      {"lat": -7.78538, "lon": 110.36587, "ele": 120.90},
+      {"lat": -7.7854, "lon": 110.36606, "ele": 120.95},
+      {"lat": -7.78547, "lon": 110.36664, "ele": 121.00},
+      {"lat": -7.78548, "lon": 110.36668, "ele": 121.00},
+      {"lat": -7.785481, "lon": 110.36669, "ele": 121.00},
+      {"lat": -7.785479, "lon": 110.366678, "ele": 121.00},
+      {"lat": -7.786201, "lon": 110.366588, "ele": 119.78},
+      {"lat": -7.787065, "lon": 110.366481, "ele": 121.00},
+      {"lat": -7.788309, "lon": 110.366326, "ele": 118.52},
+      {"lat": -7.788325, "lon": 110.366458, "ele": 118.12},
+      {"lat": -7.789057, "lon": 110.366367, "ele": 116.00},
+      {"lat": -7.789079, "lon": 110.36637, "ele": 116.00},
+      {"lat": -7.789124, "lon": 110.366394, "ele": 116.12},
+      {"lat": -7.789149, "lon": 110.3664, "ele": 116.15},
+      {"lat": -7.789363, "lon": 110.366372, "ele": 115.39},
+      {"lat": -7.789149, "lon": 110.3664, "ele": 116.15},
+      {"lat": -7.789124, "lon": 110.366394, "ele": 116.12},
+      {"lat": -7.789079, "lon": 110.36637, "ele": 116.00},
+      {"lat": -7.788985, "lon": 110.366376, "ele": 116.37},
+      {"lat": -7.788978, "lon": 110.366316, "ele": 116.41},
+      {"lat": -7.789083, "lon": 110.366303, "ele": 115.91},
+      {"lat": -7.789411, "lon": 110.366262, "ele": 115.00},
+      {"lat": -7.789405, "lon": 110.36619, "ele": 115.00},
+      {"lat": -7.78996, "lon": 110.36612, "ele": 115.66},
+      {"lat": -7.790578, "lon": 110.366041, "ele": 118.00},
+      {"lat": -7.790864, "lon": 110.366005, "ele": 116.43},
+      {"lat": -7.791803, "lon": 110.365885, "ele": 115.87},
+      {"lat": -7.791835, "lon": 110.365913, "ele": 115.79},
+      {"lat": -7.792334, "lon": 110.365851, "ele": 117.28},
+      {"lat": -7.792339, "lon": 110.365889, "ele": 117.51},
+      {"lat": -7.792643, "lon": 110.365851, "ele": 119.06},
+      {"lat": -7.792644, "lon": 110.365862, "ele": 119.13},
+      {"lat": -7.792665, "lon": 110.366163, "ele": 120.23},
+      {"lat": -7.792766, "lon": 110.36759, "ele": 114.03},
+      {"lat": -7.792767, "lon": 110.367593, "ele": 114.02},
+      {"lat": -7.793034, "lon": 110.367614, "ele": 114.00},
+      {"lat": -7.793034, "lon": 110.367568, "ele": 114.00},
+      {"lat": -7.7935, "lon": 110.367618, "ele": 113.97},
+      {"lat": -7.793603, "lon": 110.367635, "ele": 113.75},
+      {"lat": -7.793698, "lon": 110.367658, "ele": 113.67},
+      {"lat": -7.79386, "lon": 110.367725, "ele": 114.04},
+      {"lat": -7.793863, "lon": 110.36779, "ele": 113.77},
+      {"lat": -7.793899, "lon": 110.367804, "ele": 113.68},
+      {"lat": -7.793943, "lon": 110.367841, "ele": 113.47},
+      {"lat": -7.79399, "lon": 110.36788, "ele": 113.24},
+      {"lat": -7.794323, "lon": 110.368208, "ele": 110.67},
+      {"lat": -7.794637, "lon": 110.368767, "ele": 107.95},
+      {"lat": -7.794653, "lon": 110.368794, "ele": 107.82},
+      {"lat": -7.794615, "lon": 110.368854, "ele": 107.25},
+      {"lat": -7.794604, "lon": 110.369085, "ele": 105.38},
+      {"lat": -7.794188, "lon": 110.369633, "ele": 103.00},
+      {"lat": -7.794011, "lon": 110.36987, "ele": 105.20},
+      {"lat": -7.793996, "lon": 110.369891, "ele": 105.32},
+      {"lat": -7.793638, "lon": 110.370379, "ele": 108.86},
+      {"lat": -7.793452, "lon": 110.370732, "ele": 112.44},
+      {"lat": -7.793425, "lon": 110.370876, "ele": 112.88},
+      {"lat": -7.7934, "lon": 110.371583, "ele": 113.32},
+      {"lat": -7.793462, "lon": 110.373102, "ele": 113.00}
+    ];
+
+    // Global App States
+    let map = null;
+    let baseLayers = {};
+    let currentLayerKey = 'satellite';
+    let fullPolyline = null;
+    let progressPolyline = null;
+    let runnerMarker = null;
+    let startMarker = null;
+    let finishMarker = null;
+    let kmMarkers = [];
+
+    let routeData = []; // Processed points with cumulative dist, bearing, cue info
+    let totalRouteDistance = 0; // in meters
+    let cuePoints = [];
+
+    // Animation variables
+    let isPlaying = false;
+    let animationSpeed = 4; // 1x, 2x, 4x, 8x, 16x
+    let currentProgress = 0; // 0.0 to 1.0
+    let lastAnimTimestamp = null;
+    const basePaceSecPerKm = 345; // 5:45 min/km running pace (~10.43 km/h)
+    let totalEstDurationSec = 0;
+    let cameraMode = 'drone'; // 'pov', 'drone', '2d'
+    let isScrubbing = false;
+  </script>
+
+  <script>
+    // Haversine formula to compute geodesic distance between 2 points in meters
+    function getHaversineDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371000; // Earth radius in meters
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = 
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c;
+    }
+
+    // Calculate heading/bearing in degrees (0 = North, 90 = East)
+    function calculateBearing(lat1, lon1, lat2, lon2) {
+      const phi1 = lat1 * Math.PI / 180;
+      const phi2 = lat2 * Math.PI / 180;
+      const deltaLambda = (lon2 - lon1) * Math.PI / 180;
+      const y = Math.sin(deltaLambda) * Math.cos(phi2);
+      const x = Math.cos(phi1) * Math.sin(phi2) - Math.sin(phi1) * Math.cos(phi2) * Math.cos(deltaLambda);
+      let theta = Math.atan2(y, x);
+      let bearing = (theta * 180 / Math.PI + 360) % 360;
+      return bearing;
+    }
+
+    // Interpolate point along segment based on ratio t (0 <= t <= 1)
+    function interpolatePoint(p1, p2, t) {
+      return {
+        lat: p1.lat + (p2.lat - p1.lat) * t,
+        lon: p1.lon + (p2.lon - p1.lon) * t,
+        ele: p1.ele + (p2.ele - p1.ele) * t
+      };
+    }
+
+    // Preprocess route coordinates & calculate cumulative distances and turns
+    function preprocessRouteData() {
+      routeData = [];
+      let cumDist = 0;
+
+      for (let i = 0; i < RAW_GPX_POINTS.length; i++) {
+        const pt = RAW_GPX_POINTS[i];
+        let segmentDist = 0;
+        let bearing = 0;
+
+        if (i > 0) {
+          const prev = RAW_GPX_POINTS[i - 1];
+          segmentDist = getHaversineDistance(prev.lat, prev.lon, pt.lat, pt.lon);
+          cumDist += segmentDist;
+          bearing = calculateBearing(prev.lat, prev.lon, pt.lat, pt.lon);
+        } else if (RAW_GPX_POINTS.length > 1) {
+          const next = RAW_GPX_POINTS[1];
+          bearing = calculateBearing(pt.lat, pt.lon, next.lat, next.lon);
+        }
+
+        routeData.push({
+          lat: pt.lat,
+          lon: pt.lon,
+          ele: pt.ele,
+          cumDist: cumDist,
+          segmentDist: segmentDist,
+          bearing: bearing,
+          index: i
+        });
+      }
+
+      totalRouteDistance = cumDist;
+      totalEstDurationSec = (totalRouteDistance / 1000) * basePaceSecPerKm;
+
+      // Extract Turn Cues based on change in bearing & notable checkpoints
+      generateCueDirections();
+    }
+
+    // Turn Angle to readable direction text & icon
+    function getTurnDescription(deltaBearing) {
+      if (deltaBearing > 180) deltaBearing -= 360;
+      if (deltaBearing < -180) deltaBearing += 360;
+
+      if (deltaBearing > 55 && deltaBearing <= 135) {
+        return { text: "Turn Right", icon: "fa-arrow-right", iconBg: "text-amber-400 bg-amber-500/20" };
+      } else if (deltaBearing > 135) {
+        return { text: "Sharp Right / U-Turn", icon: "fa-arrow-rotate-right", iconBg: "text-rose-400 bg-rose-500/20" };
+      } else if (deltaBearing > 20 && deltaBearing <= 55) {
+        return { text: "Veer Right", icon: "fa-arrow-up-right-dots", iconBg: "text-amber-300 bg-amber-500/20" };
+      } else if (deltaBearing < -55 && deltaBearing >= -135) {
+        return { text: "Turn Left", icon: "fa-arrow-left", iconBg: "text-blue-400 bg-blue-500/20" };
+      } else if (deltaBearing < -135) {
+        return { text: "Sharp Left / U-Turn", icon: "fa-arrow-rotate-left", iconBg: "text-rose-400 bg-rose-500/20" };
+      } else if (deltaBearing < -20 && deltaBearing >= -55) {
+        return { text: "Veer Left", icon: "fa-arrow-up-left-dots", iconBg: "text-blue-300 bg-blue-500/20" };
+      } else {
+        return { text: "Continue Straight", icon: "fa-arrow-up", iconBg: "text-emerald-400 bg-emerald-500/20" };
+      }
+    }
+
+    function generateCueDirections() {
+      cuePoints = [];
+      cuePoints.push({
+        dist: 0,
+        title: "Start at DM Fitness",
+        desc: "Begin running north via Jalan Veteran / Gambiran area",
+        icon: "fa-flag-checkered",
+        iconBg: "text-emerald-400 bg-emerald-500/20",
+        index: 0
+      });
+
+      let lastBearing = routeData[0]?.bearing || 0;
+      let lastCueDist = 0;
+
+      for (let i = 2; i < routeData.length - 1; i++) {
+        const pt = routeData[i];
+        const nextPt = routeData[i + 1];
+        const segBearing = calculateBearing(pt.lat, pt.lon, nextPt.lat, nextPt.lon);
+        let delta = segBearing - lastBearing;
+        if (delta > 180) delta -= 360;
+        if (delta < -180) delta += 360;
+
+        // Trigger turn cue if angle change > 30 degrees and spaced by at least 120m
+        if (Math.abs(delta) > 32 && (pt.cumDist - lastCueDist > 140)) {
+          const turn = getTurnDescription(delta);
+          
+          let landmark = "Follow street corridor";
+          if (pt.cumDist > 2000 && pt.cumDist < 3500) landmark = "Passing near Lempuyangan Station";
+          else if (pt.cumDist >= 3500 && pt.cumDist < 5500) landmark = "Approaching Danurejan / Malioboro North";
+          else if (pt.cumDist >= 5500 && pt.cumDist < 8000) landmark = "Heading south through West Jogja lanes";
+          else if (pt.cumDist >= 8000) landmark = "Looping back towards East Jogja finish line";
+
+          cuePoints.push({
+            dist: pt.cumDist,
+            title: `${turn.text}`,
+            desc: landmark,
+            icon: turn.icon,
+            iconBg: turn.iconBg,
+            index: i
+          });
+
+          lastBearing = segBearing;
+          lastCueDist = pt.cumDist;
+        }
+      }
+
+      cuePoints.push({
+        dist: totalRouteDistance,
+        title: "Finish Route",
+        desc: "Custom running circuit complete!",
+        icon: "fa-trophy",
+        iconBg: "text-orange-400 bg-orange-500/20",
+        index: routeData.length - 1
+      });
+
+      renderCueSheetUI();
+    }
+
+    function renderCueSheetUI() {
+      const container = document.getElementById('cue-list-container');
+      container.innerHTML = '';
+
+      cuePoints.forEach((cue, idx) => {
+        const item = document.createElement('div');
+        item.className = `p-2.5 rounded-xl border border-slate-800 bg-slate-900/70 hover:bg-slate-800/90 cursor-pointer transition flex items-start gap-2.5 cue-card-${idx}`;
+        item.onclick = () => {
+          jumpToDistance(cue.dist);
+          toggleCueSheet();
+        };
+
+        item.innerHTML = `
+          <div class="w-8 h-8 rounded-lg ${cue.iconBg} border border-slate-700 flex items-center justify-center shrink-0 text-sm">
+            <i class="fa-solid ${cue.icon}"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-white truncate">${cue.title}</span>
+              <span class="text-[10px] font-mono font-semibold text-orange-400">${(cue.dist / 1000).toFixed(2)} km</span>
+            </div>
+            <p class="text-[11px] text-slate-400 truncate">${cue.desc}</p>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    }
+  </script>
+
+  <script>
+    function initMap() {
+      // Map center near Yogyakarta running route
+      const startCoord = [RAW_GPX_POINTS[0].lat, RAW_GPX_POINTS[0].lon];
+
+      map = L.map('map', {
+        zoomControl: false,
+        attributionControl: false
+      }).setView(startCoord, 16);
+
+      // Tile layers
+      baseLayers.satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 19,
+        maxNativeZoom: 18
+      });
+
+      baseLayers.dark = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+        subdomains: 'abcd',
+        maxZoom: 19
+      });
+
+      baseLayers.osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19
+      });
+
+      // Default to Satellite view
+      baseLayers.satellite.addTo(map);
+
+      // Draw Full Static Route Line (Glow + Solid Path)
+      const latlngs = routeData.map(p => [p.lat, p.lon]);
+
+      // Route Shadow/Casing
+      L.polyline(latlngs, {
+        color: '#0f172a',
+        weight: 9,
+        opacity: 0.8,
+        lineCap: 'round',
+        lineJoin: 'round'
+      }).addTo(map);
+
+      // Full Route Line
+      fullPolyline = L.polyline(latlngs, {
+        color: '#38bdf8',
+        weight: 5,
+        opacity: 0.55,
+        dashArray: '8, 8',
+        lineCap: 'round',
+        lineJoin: 'round'
+      }).addTo(map);
+
+      // Dynamic Animated Progress Polyline (Solid Orange)
+      progressPolyline = L.polyline([[startCoord[0], startCoord[1]]], {
+        color: '#f97316',
+        weight: 6,
+        opacity: 0.95,
+        lineCap: 'round',
+        lineJoin: 'round'
+      }).addTo(map);
+
+      // Custom Start & Finish Markers
+      createEndpointsAndKmMarkers();
+
+      // Runner Animated Avatar Marker
+      createRunnerMarker(startCoord);
+
+      // Fit route initial bounds
+      map.fitBounds(fullPolyline.getBounds(), { padding: [50, 50] });
+
+      // Build Elevation Profile SVG
+      buildElevationChart();
+
+      // Format Total Time Indicator
+      document.getElementById('time-total').innerText = formatHMS(totalEstDurationSec);
+    }
+
+    function createEndpointsAndKmMarkers() {
+      // Start Icon
+      const startHtml = `
+        <div class="relative flex items-center justify-center">
+          <div class="w-8 h-8 rounded-full bg-emerald-500 text-slate-950 flex items-center justify-center shadow-lg border-2 border-white font-bold text-xs">
+            <i class="fa-solid fa-play ml-0.5"></i>
+          </div>
+          <div class="absolute -bottom-6 bg-slate-900/90 text-emerald-400 font-extrabold text-[10px] px-2 py-0.5 rounded shadow border border-emerald-500/30 whitespace-nowrap">START: DM FITNESS</div>
+        </div>
+      `;
+      startMarker = L.marker([RAW_GPX_POINTS[0].lat, RAW_GPX_POINTS[0].lon], {
+        icon: L.divIcon({ className: '', html: startHtml, iconSize: [32, 32], iconAnchor: [16, 16] })
+      }).addTo(map);
+
+      // Finish Icon
+      const lastPt = RAW_GPX_POINTS[RAW_GPX_POINTS.length - 1];
+      const finishHtml = `
+        <div class="relative flex items-center justify-center">
+          <div class="w-8 h-8 rounded-full bg-orange-500 text-slate-950 flex items-center justify-center shadow-lg border-2 border-white font-bold text-xs">
+            <i class="fa-solid fa-flag-checkered"></i>
+          </div>
+          <div class="absolute -bottom-6 bg-slate-900/90 text-orange-400 font-extrabold text-[10px] px-2 py-0.5 rounded shadow border border-orange-500/30 whitespace-nowrap">FINISH (10.8K)</div>
+        </div>
+      `;
+      finishMarker = L.marker([lastPt.lat, lastPt.lon], {
+        icon: L.divIcon({ className: '', html: finishHtml, iconSize: [32, 32], iconAnchor: [16, 16] })
+      }).addTo(map);
+
+      // Add Kilometer Badges along the route (every 1 km)
+      let nextKmTarget = 1000;
+      for (let i = 0; i < routeData.length; i++) {
+        if (routeData[i].cumDist >= nextKmTarget && nextKmTarget < totalRouteDistance - 400) {
+          const kmNum = Math.floor(nextKmTarget / 1000);
+          const kmHtml = `
+            <div class="w-6 h-6 rounded-full bg-slate-900/95 border-2 border-amber-400 text-amber-300 font-extrabold text-[10px] flex items-center justify-center shadow-md font-mono">
+              ${kmNum}k
+            </div>
+          `;
+          const m = L.marker([routeData[i].lat, routeData[i].lon], {
+            icon: L.divIcon({ className: '', html: kmHtml, iconSize: [24, 24], iconAnchor: [12, 12] })
+          }).addTo(map);
+          kmMarkers.push(m);
+          nextKmTarget += 1000;
+        }
+      }
+    }
+
+    function createRunnerMarker(startCoord) {
+      const runnerHtml = `
+        <div id="runner-avatar-wrapper" class="relative w-12 h-12 flex items-center justify-center">
+          <div class="absolute inset-0 rounded-full bg-orange-500 runner-pulse"></div>
+          <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-amber-500 to-orange-500 border-2 border-white shadow-2xl flex items-center justify-center text-slate-950 z-10">
+            <div id="runner-arrow" class="transition-transform duration-150">
+              <i class="fa-solid fa-person-running text-lg"></i>
+            </div>
+          </div>
+        </div>
+      `;
+      runnerMarker = L.marker(startCoord, {
+        icon: L.divIcon({ className: '', html: runnerHtml, iconSize: [48, 48], iconAnchor: [24, 24] }),
+        zIndexOffset: 1000
+      }).addTo(map);
+    }
+  </script>
+
+  <script>
+    let eleMin = 100, eleMax = 125;
+
+    function buildElevationChart() {
+      const svg = document.getElementById('elevation-svg');
+      const container = document.getElementById('elevation-container');
+      const width = container.clientWidth || 600;
+      const height = container.clientHeight || 64;
+
+      const elevations = routeData.map(p => p.ele);
+      eleMin = Math.floor(Math.min(...elevations)) - 2;
+      eleMax = Math.ceil(Math.max(...elevations)) + 2;
+
+      let dLine = '';
+      let dArea = '';
+
+      routeData.forEach((pt, i) => {
+        const x = (pt.cumDist / totalRouteDistance) * width;
+        const normalizedEle = (pt.ele - eleMin) / (eleMax - eleMin);
+        const y = height - (normalizedEle * (height - 12)) - 4;
+
+        if (i === 0) {
+          dLine += `M ${x.toFixed(1)} ${y.toFixed(1)}`;
+          dArea += `M ${x.toFixed(1)} ${height} L ${x.toFixed(1)} ${y.toFixed(1)}`;
+        } else {
+          dLine += ` L ${x.toFixed(1)} ${y.toFixed(1)}`;
+          dArea += ` L ${x.toFixed(1)} ${y.toFixed(1)}`;
+        }
+
+        if (i === routeData.length - 1) {
+          dArea += ` L ${x.toFixed(1)} ${height} Z`;
+        }
+      });
+
+      document.getElementById('ele-line').setAttribute('d', dLine);
+      document.getElementById('ele-area').setAttribute('d', dArea);
+
+      // SVG Click / Hover Scrubbing
+      container.addEventListener('click', (e) => {
+        const rect = container.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const ratio = Math.max(0, Math.min(1, clickX / rect.width));
+        jumpToDistance(ratio * totalRouteDistance);
+      });
+    }
+
+    function updateElevationMarker(progressRatio, currentEle) {
+      const container = document.getElementById('elevation-container');
+      const width = container.clientWidth || 600;
+      const height = container.clientHeight || 64;
+
+      const x = progressRatio * width;
+      const normalizedEle = (currentEle - eleMin) / (eleMax - eleMin);
+      const y = height - (normalizedEle * (height - 12)) - 4;
+
+      const line = document.getElementById('ele-marker-line');
+      const dot = document.getElementById('ele-marker-dot');
+
+      line.setAttribute('x1', x);
+      line.setAttribute('x2', x);
+      dot.setAttribute('cx', x);
+      dot.setAttribute('cy', y);
+
+      document.getElementById('elevation-hover-label').innerText = `Current Ele: ${currentEle.toFixed(1)}m | Route Gain: +82m`;
+    }
+  </script>
+
+  <script>
+    // Get state along route given distance in meters
+    function getRouteStateAtDistance(targetDist) {
+      if (targetDist <= 0) {
+        return {
+          point: routeData[0],
+          lat: routeData[0].lat,
+          lon: routeData[0].lon,
+          ele: routeData[0].ele,
+          bearing: routeData[0].bearing,
+          index: 0,
+          passedPoints: [routeData[0]]
+        };
+      }
+
+      if (targetDist >= totalRouteDistance) {
+        const last = routeData[routeData.length - 1];
+        return {
+          point: last,
+          lat: last.lat,
+          lon: last.lon,
+          ele: last.ele,
+          bearing: last.bearing,
+          index: routeData.length - 1,
+          passedPoints: [...routeData]
+        };
+      }
+
+      // Binary search segment
+      let low = 0, high = routeData.length - 1;
+      while (low <= high) {
+        let mid = Math.floor((low + high) / 2);
+        if (routeData[mid].cumDist < targetDist) {
+          low = mid + 1;
+        } else {
+          high = mid - 1;
+        }
+      }
+
+      const p1 = routeData[low - 1];
+      const p2 = routeData[low];
+      const segmentLen = p2.cumDist - p1.cumDist;
+      const t = segmentLen > 0 ? (targetDist - p1.cumDist) / segmentLen : 0;
+      const interp = interpolatePoint(p1, p2, t);
+      const segBearing = calculateBearing(p1.lat, p1.lon, p2.lat, p2.lon);
+
+      // Passed coordinates for trailing polyline
+      const passed = routeData.slice(0, low);
+      passed.push({ lat: interp.lat, lon: interp.lon });
+
+      return {
+        point: interp,
+        lat: interp.lat,
+        lon: interp.lon,
+        ele: interp.ele,
+        bearing: segBearing,
+        index: low,
+        passedPoints: passed
+      };
+    }
+
+    // Main animation step runner
+    function animationLoop(timestamp) {
+      if (!isPlaying) {
+        lastAnimTimestamp = null;
+        return;
+      }
+
+      if (!lastAnimTimestamp) lastAnimTimestamp = timestamp;
+      const deltaSec = (timestamp - lastAnimTimestamp) / 1000;
+      lastAnimTimestamp = timestamp;
+
+      // Increment progress based on speed multiplier and pace
+      const stepMeters = (1000 / basePaceSecPerKm) * animationSpeed * deltaSec;
+      const stepRatio = stepMeters / totalRouteDistance;
+
+      currentProgress += stepRatio;
+
+      if (currentProgress >= 1.0) {
+        currentProgress = 1.0;
+        updateSimState(currentProgress);
+        pauseAnimation();
+        return;
+      }
+
+      updateSimState(currentProgress);
+      requestAnimationFrame(animationLoop);
+    }
+
+    function updateSimState(progress) {
+      const currentMeters = progress * totalRouteDistance;
+      const state = getRouteStateAtDistance(currentMeters);
+
+      // 1. Update Runner Marker Position & Icon Rotation
+      if (runnerMarker) {
+        runnerMarker.setLatLng([state.lat, state.lon]);
+        const arrowEl = document.getElementById('runner-arrow');
+        if (arrowEl) {
+          arrowEl.style.transform = `rotate(${state.bearing}deg)`;
+        }
+      }
+
+      // 2. Update Progress Polyline trail
+      if (progressPolyline) {
+        const trail = state.passedPoints.map(p => [p.lat, p.lon]);
+        progressPolyline.setLatLngs(trail);
+      }
+
+      // 3. Update Camera Follow based on mode
+      updateCameraFollow(state);
+
+      // 4. Update Compass Rose
+      const compass = document.getElementById('compass-rose');
+      if (compass) {
+        compass.style.transform = `rotate(${state.bearing}deg)`;
+      }
+      document.getElementById('stat-bearing').innerHTML = `${Math.round(state.bearing)}&deg; ${getCompassHeadingLabel(state.bearing)}`;
+
+      // 5. Update HUD Numbers
+      document.getElementById('stat-dist').innerHTML = `${(currentMeters / 1000).toFixed(2)} <span class="text-[10px] text-slate-400">km</span>`;
+      document.getElementById('stat-ele').innerHTML = `${Math.round(state.ele)} <span class="text-[10px] text-slate-400">m</span>`;
+      document.getElementById('stat-remain').innerHTML = `${((totalRouteDistance - currentMeters) / 1000).toFixed(2)} <span class="text-[10px] text-slate-400">km</span>`;
+
+      // 6. Update Timeline Scrubber
+      if (!isScrubbing) {
+        document.getElementById('route-scrubber').value = (progress * 100).toFixed(2);
+      }
+      const currentSec = progress * totalEstDurationSec;
+      document.getElementById('time-current').innerText = formatHMS(currentSec);
+
+      // 7. Update Elevation Profile Cursor
+      updateElevationMarker(progress, state.ele);
+
+      // 8. Update Turn-by-Turn Navigation HUD
+      updateNavigationCallout(currentMeters);
+    }
+
+    function updateCameraFollow(state) {
+      if (!map) return;
+
+      if (cameraMode === 'pov') {
+        // High zoom with heading lead offset
+        map.setView([state.lat, state.lon], 18, { animate: false });
+      } else if (cameraMode === 'drone') {
+        // 3D medium drone angle
+        map.setView([state.lat, state.lon], 17, { animate: false });
+      } else {
+        // 2D Follow
+        map.panTo([state.lat, state.lon], { animate: false });
+      }
+    }
+
+    function updateNavigationCallout(currentMeters) {
+      // Find next upcoming cue
+      let nextCue = cuePoints.find(c => c.dist > currentMeters + 15);
+      if (!nextCue) {
+        nextCue = cuePoints[cuePoints.length - 1];
+      }
+
+      const distToTurn = Math.max(0, Math.round(nextCue.dist - currentMeters));
+      
+      const iconBg = document.getElementById('nav-turn-icon-bg');
+      const icon = document.getElementById('nav-turn-icon');
+      const callout = document.getElementById('nav-distance-callout');
+      const title = document.getElementById('nav-instruction');
+      const desc = document.getElementById('nav-subinstruction');
+
+      if (distToTurn <= 25 && nextCue.dist === totalRouteDistance) {
+        callout.innerText = "ARRIVED";
+        title.innerText = "Goal Reached!";
+        desc.innerText = "Custom route run complete";
+        icon.className = "fa-solid fa-flag-checkered";
+      } else if (distToTurn <= 20) {
+        callout.innerText = "NOW";
+        title.innerText = nextCue.title;
+        desc.innerText = nextCue.desc;
+        icon.className = `fa-solid ${nextCue.icon}`;
+      } else {
+        callout.innerText = `IN ${distToTurn} M`;
+        title.innerText = nextCue.title;
+        desc.innerText = nextCue.desc;
+        icon.className = `fa-solid ${nextCue.icon}`;
+      }
+    }
+
+    function getCompassHeadingLabel(deg) {
+      const sectors = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+      const index = Math.round(deg / 45) % 8;
+      return sectors[index];
+    }
+
+    function formatHMS(seconds) {
+      const s = Math.floor(seconds);
+      const m = Math.floor(s / 60);
+      const h = Math.floor(m / 60);
+      const displayM = m % 60;
+      const displayS = s % 60;
+      if (h > 0) {
+        return `${String(h).padStart(2, '0')}:${String(displayM).padStart(2, '0')}:${String(displayS).padStart(2, '0')}`;
+      }
+      return `${String(displayM).padStart(2, '0')}:${String(displayS).padStart(2, '0')}`;
+    }
+  </script>
+
+  <script>
+    function togglePlayPause() {
+      if (isPlaying) {
+        pauseAnimation();
+      } else {
+        startAnimation();
+      }
+    }
+
+    function startAnimation() {
+      if (currentProgress >= 1.0) {
+        currentProgress = 0;
+      }
+      isPlaying = true;
+      document.getElementById('play-btn-text').innerText = "Pause";
+      document.getElementById('play-btn-icon').className = "fa-solid fa-pause";
+      lastAnimTimestamp = null;
+      requestAnimationFrame(animationLoop);
+    }
+
+    function pauseAnimation() {
+      isPlaying = false;
+      document.getElementById('play-btn-text').innerText = "Resume";
+      document.getElementById('play-btn-icon').className = "fa-solid fa-play";
+    }
+
+    function resetAnimation() {
+      pauseAnimation();
+      currentProgress = 0;
+      updateSimState(0);
+      document.getElementById('play-btn-text').innerText = "Start Flyover";
+    }
+
+    function stepForward(seconds) {
+      const stepRatio = seconds / totalEstDurationSec;
+      currentProgress = Math.max(0, Math.min(1.0, currentProgress + stepRatio));
+      updateSimState(currentProgress);
+    }
+
+    function onScrubProgress(val) {
+      isScrubbing = true;
+      currentProgress = parseFloat(val) / 100;
+      updateSimState(currentProgress);
+      setTimeout(() => { isScrubbing = false; }, 50);
+    }
+
+    function jumpToDistance(meters) {
+      currentProgress = Math.max(0, Math.min(1.0, meters / totalRouteDistance));
+      updateSimState(currentProgress);
+    }
+
+    function jumpToKm(km) {
+      jumpToDistance(km * 1000);
+    }
+
+    function setSpeed(spd) {
+      animationSpeed = spd;
+      [1, 2, 4, 8, 16].forEach(s => {
+        const el = document.getElementById(`spd-${s}`);
+        if (s === spd) {
+          el.className = "px-2.5 py-1 rounded-lg font-bold text-white bg-orange-500/30 border border-orange-500/50 shadow-sm transition";
+        } else {
+          el.className = "px-2.5 py-1 rounded-lg text-slate-400 hover:text-white transition";
+        }
+      });
+    }
+
+    function setCameraMode(mode) {
+      cameraMode = mode;
+      const viewport = document.getElementById('map-viewport');
+      
+      viewport.classList.remove('mode-3d-pov', 'mode-3d-drone', 'mode-2d');
+      if (mode === 'pov') viewport.classList.add('mode-3d-pov');
+      else if (mode === 'drone') viewport.classList.add('mode-3d-drone');
+      else viewport.classList.add('mode-2d');
+
+      ['pov', 'drone', '2d'].forEach(m => {
+        const btn = document.getElementById(`cam-${m}`);
+        if (m === mode) {
+          btn.className = "p-2 rounded-lg text-orange-400 bg-orange-500/20 border border-orange-500/40 transition flex items-center gap-2 text-xs font-semibold";
+        } else {
+          btn.className = "p-2 rounded-lg text-slate-400 hover:text-white transition flex items-center gap-2 text-xs font-semibold";
+        }
+      });
+
+      const currentMeters = currentProgress * totalRouteDistance;
+      const state = getRouteStateAtDistance(currentMeters);
+      updateCameraFollow(state);
+    }
+
+    function setMapLayer(layerKey) {
+      if (currentLayerKey === layerKey) return;
+
+      map.removeLayer(baseLayers[currentLayerKey]);
+      baseLayers[layerKey].addTo(map);
+      currentLayerKey = layerKey;
+
+      ['satellite', 'dark', 'osm'].forEach(k => {
+        const btn = document.getElementById(`layer-${k === 'satellite' ? 'sat' : k}`);
+        if (k === layerKey) {
+          btn.className = "px-2.5 py-1.5 rounded-md font-medium text-white bg-slate-700 transition flex items-center gap-1.5 shadow-sm";
+        } else {
+          btn.className = "px-2.5 py-1.5 rounded-md font-medium text-slate-400 hover:text-white transition flex items-center gap-1.5";
+        }
+      });
+    }
+
+    function fitRouteBounds() {
+      if (fullPolyline && map) {
+        map.fitBounds(fullPolyline.getBounds(), { padding: [60, 60], animate: true });
+      }
+    }
+
+    function toggleCueSheet() {
+      const drawer = document.getElementById('cue-sheet-drawer');
+      drawer.classList.toggle('translate-x-full');
+    }
+
+    // Window resize handler to rebuild elevation graph
+    window.addEventListener('resize', () => {
+      buildElevationChart();
+      updateElevationMarker(currentProgress, routeData[0]?.ele || 104);
+    });
+
+    // Initialize entire simulator upon window load
+    window.onload = function() {
+      // Ensure Leaflet has fully loaded
+      function startWhenReady() {
+        if (typeof L !== 'undefined') {
+          preprocessRouteData();
+          initMap();
+          updateSimState(0);
+        } else {
+          setTimeout(startWhenReady, 50);
+        }
+      }
+      startWhenReady();
+    };
+  </script>
+</body>
+</html>
