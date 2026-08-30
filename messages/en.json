@@ -35,7 +35,8 @@
     "estDuration": "EST. TIME",
     "downloadGpx": "Download GPX",
     "startRun": "Start Run",
-    "shapePreview": "Route Shape Preview"
+    "shapePreview": "Route Shape Preview",
+    "exportVideo": "Export Video"
   },
   "runMode": {
     "warningTitle": "Browser Run Mode Notice",

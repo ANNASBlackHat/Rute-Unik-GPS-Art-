@@ -7,6 +7,7 @@ import { ElevationChart } from '@/components/elevation/ElevationChart';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
 import { Link } from '@/i18n/routing';
+import { VideoExportButton } from '@/components/video/VideoExportButton';
 
 export default async function RouteDetailPage({
   params,
@@ -18,10 +19,24 @@ export default async function RouteDetailPage({
   const t = await getTranslations('routeDetail');
   const tHome = await getTranslations('home');
 
-  // Fetch route data
-  const { data: route, error } = await supabase
-    .from('routes')
-    .select(`
+  // Fetch route data — try Supabase first, fallback to direct PG if Supabase unreachable (e.g. ENETUNREACH on remote)
+  let route: {
+    id: string;
+    name: string;
+    city_id: string;
+    distance_m: number;
+    elevation_gain_m: number | null;
+    status: string;
+    gpx_raw: string;
+    thumbnail_svg: string;
+    cities: { id: string; name: string; country: string } | null;
+  } | null = null;
+
+  try {
+    const { data, error } = await supabase
+      .from('routes')
+      .select(
+        `
       id,
       name,
       city_id,
@@ -35,11 +50,54 @@ export default async function RouteDetailPage({
         name,
         country
       )
-    `)
-    .eq('id', id)
-    .single();
+    `,
+      )
+      .eq('id', id)
+      .single();
+    if (!error && data) route = data as unknown as NonNullable<typeof route>;
+  } catch {
+    // ignore, will fallback to PG
+  }
 
-  if (error || !route) {
+  if (!route) {
+    // Fallback to direct PG (local postgis) — keeps dev working when Supabase network is down
+    try {
+      const { Client } = await import('pg');
+      const client = new Client({
+        connectionString: process.env.DATABASE_URL,
+        ssl: process.env.DATABASE_URL?.includes('supabase.co') ? { rejectUnauthorized: false } : undefined,
+      });
+      await client.connect();
+      try {
+        const res = await client.query(
+          `select r.id, r.name, r.city_id, r.distance_m, r.elevation_gain_m, r.status, r.gpx_raw, r.thumbnail_svg,
+                  c.id as city_id2, c.name as city_name, c.country as city_country
+           from public.routes r left join public.cities c on c.id = r.city_id where r.id = $1 limit 1`,
+          [id],
+        );
+        if (res.rows.length > 0) {
+          const row = res.rows[0];
+          route = {
+            id: row.id,
+            name: row.name,
+            city_id: row.city_id,
+            distance_m: Number(row.distance_m),
+            elevation_gain_m: row.elevation_gain_m ? Number(row.elevation_gain_m) : null,
+            status: row.status,
+            gpx_raw: row.gpx_raw,
+            thumbnail_svg: row.thumbnail_svg,
+            cities: row.city_name ? { id: row.city_id2, name: row.city_name, country: row.city_country } : null,
+          };
+        }
+      } finally {
+        await client.end().catch(() => {});
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  if (!route) {
     notFound();
   }
 
@@ -86,7 +144,7 @@ export default async function RouteDetailPage({
           ← {t('backToDirectory')}
         </Link>
 
-        <Badge variant={route.status}>
+        <Badge variant={route.status as 'official' | 'community' | 'pending' | 'rejected'}>
           {route.status === 'official'
             ? tHome('official')
             : tHome('community')}
@@ -183,6 +241,15 @@ export default async function RouteDetailPage({
               >
                 🏃 {t('startRun')}
               </Link>
+
+              <VideoExportButton
+                routeId={route.id}
+                routeName={route.name}
+                cityName={cityName}
+                distanceKm={distanceKm}
+                elevationGain={elevation}
+                coordinates={coordinates}
+              />
             </div>
           </Card>
 

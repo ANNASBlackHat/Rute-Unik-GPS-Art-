@@ -35,7 +35,8 @@
     "estDuration": "EST. WAKTU",
     "downloadGpx": "Unduh GPX",
     "startRun": "Mulai Lari",
-    "shapePreview": "Pratinjau Bentuk Rute"
+    "shapePreview": "Pratinjau Bentuk Rute",
+    "exportVideo": "Ekspor Video"
   },
   "runMode": {
     "warningTitle": "Pemberitahuan Mode Lari Peramban",
