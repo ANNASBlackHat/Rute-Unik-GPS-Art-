@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { parseGpx, ParsedGpx } from '@/lib/gpx';
@@ -32,6 +32,7 @@ export function UploadForm({ cities, locale }: UploadFormProps) {
   const [isDragging, setIsDragging] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const errorSummaryRef = useRef<HTMLDivElement>(null);
 
   const handleFileProcess = (file: File) => {
     setErrorMsg(null);
@@ -75,10 +76,20 @@ export function UploadForm({ cities, locale }: UploadFormProps) {
     }
   };
 
+  useEffect(() => {
+    if (errorMsg && errorSummaryRef.current) {
+      errorSummaryRef.current.focus();
+    }
+  }, [errorMsg]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!parsed || !gpxRaw) {
       setErrorMsg(t('missingFileError'));
+      return;
+    }
+    if (!name.trim()) {
+      setErrorMsg(t('missingNameError') || 'Route name is required');
       return;
     }
 
@@ -126,16 +137,42 @@ export function UploadForm({ cities, locale }: UploadFormProps) {
       {errorMsg && (
         <div
           id="upload-error-banner"
+          ref={errorSummaryRef}
           role="alert"
-          className="p-3 bg-error text-error-on border border-white/20 rounded-[4px] font-body text-xs flex items-start gap-2"
+          tabIndex={-1}
+          aria-labelledby="upload-error-title"
+          className="p-3 bg-error text-error-on border border-white/20 rounded-[4px] font-body text-xs space-y-2"
         >
-          <AlertTriangle size={16} strokeWidth={1.5} aria-hidden="true" className="shrink-0 mt-0.5" /> <span>{errorMsg}</span>
+          <p id="upload-error-title" className="font-bold flex items-center gap-2">
+            <AlertTriangle size={16} strokeWidth={1.5} aria-hidden="true" className="shrink-0" /> {t('errorTitle') || 'There is a problem'}
+          </p>
+          <p>{errorMsg}</p>
+          <ul className="list-disc pl-5 space-y-1">
+            {!parsed && (
+              <li>
+                <a href="#gpx-dropzone" className="underline hover:no-underline">
+                  {t('missingFileError')}
+                </a>
+              </li>
+            )}
+            {!name.trim() && parsed && (
+              <li>
+                <a href="#input-route-name" className="underline hover:no-underline">
+                  {t('routeNameLabel')} — {t('required') || 'required'}
+                </a>
+              </li>
+            )}
+          </ul>
         </div>
       )}
 
       {/* Drag and Drop GPX Area */}
       <div
         id="gpx-dropzone"
+        role="button"
+        tabIndex={0}
+        aria-label={t('dropzonePrompt')}
+        aria-describedby="gpx-dropzone-hint"
         onDragOver={(e) => {
           e.preventDefault();
           setIsDragging(true);
@@ -143,7 +180,13 @@ export function UploadForm({ cities, locale }: UploadFormProps) {
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
-        className={`p-6 sm:p-8 rounded-[8px] border-2 border-dashed transition-colors cursor-pointer text-center space-y-3 ${
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            fileInputRef.current?.click();
+          }
+        }}
+        className={`p-6 sm:p-8 rounded-[8px] border-2 border-dashed transition-colors cursor-pointer text-center space-y-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 ${
           isDragging
             ? 'border-trail-orange bg-trail-orange/5'
             : 'border-contour-tan bg-chalk hover:border-ink/50'
@@ -170,7 +213,7 @@ export function UploadForm({ cities, locale }: UploadFormProps) {
           <p className="font-display text-sm uppercase text-ink">
             {fileName ? fileName : t('dropzonePrompt')}
           </p>
-          <span className="font-data text-[11px] text-ink/60 block">
+          <span id="gpx-dropzone-hint" className="font-data text-xs text-ink/70 block">
             {t('dropzoneHint')}
           </span>
         </div>
@@ -235,27 +278,32 @@ export function UploadForm({ cities, locale }: UploadFormProps) {
       {/* Form Fields */}
       <Card className="p-6 space-y-4 bg-chalk">
         <div className="space-y-1 font-data text-xs">
-          <label className="block uppercase text-ink/70 font-semibold text-[11px]">
-            {t('routeNameLabel')} *
+          <label htmlFor="input-route-name" className="block uppercase text-ink/70 font-semibold text-[11px]">
+            {t('routeNameLabel')} <span aria-hidden="true">*</span>
           </label>
           <input
             type="text"
             id="input-route-name"
             required
+            aria-required="true"
+            aria-invalid={!!errorMsg && !name.trim() ? 'true' : undefined}
+            aria-describedby={errorMsg && !name.trim() ? 'upload-error-banner' : undefined}
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="E.G. KUCING DAGO"
             className="w-full px-3 py-2.5 bg-paper border border-contour-tan rounded-[4px] font-display text-sm uppercase text-ink focus:outline-none focus:border-ink"
+            autoComplete="off"
           />
         </div>
 
         <div className="space-y-1 font-data text-xs">
-          <label className="block uppercase text-ink/70 font-semibold text-[11px]">
-            {t('citySelectLabel')} *
+          <label htmlFor="select-route-city" className="block uppercase text-ink/70 font-semibold text-[11px]">
+            {t('citySelectLabel')} <span aria-hidden="true">*</span>
           </label>
           <select
             id="select-route-city"
             required
+            aria-required="true"
             value={cityId}
             onChange={(e) => setCityId(e.target.value)}
             className="w-full px-3 py-2.5 bg-paper border border-contour-tan rounded-[4px] font-data text-xs text-ink focus:outline-none focus:border-ink cursor-pointer"
@@ -274,8 +322,10 @@ export function UploadForm({ cities, locale }: UploadFormProps) {
             id="btn-submit-route"
             variant="primary"
             disabled={loading || !parsed}
-            className="w-full sm:w-auto px-6 py-2.5"
+            aria-busy={loading}
+            className="w-full sm:w-auto px-6 py-2.5 inline-flex items-center justify-center gap-2"
           >
+            {loading && <Loader2 size={16} strokeWidth={1.5} aria-hidden="true" className="animate-spin" />}
             {loading ? t('uploading') : t('submitButton')}
           </Button>
         </div>
