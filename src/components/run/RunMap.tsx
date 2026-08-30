@@ -1,12 +1,20 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { ensureMaplibreWorker } from '@/lib/maplibre-worker';
+import { MAP_STYLES, type MapStyleKey } from '@/lib/map-style';
 
 ensureMaplibreWorker();
-import { MAP_STYLE } from '@/lib/map-style';
+
+const STYLE_STORAGE_KEY = 'rute-unik:map-style';
+
+function getInitialStyle(): MapStyleKey {
+  if (typeof window === 'undefined') return 'streets';
+  const saved = window.localStorage.getItem(STYLE_STORAGE_KEY) as MapStyleKey | null;
+  return saved === 'satellite' ? 'satellite' : 'streets';
+}
 
 interface RunMapProps {
   coordinates: [number, number][]; // route polyline [lon, lat]
@@ -30,6 +38,52 @@ export default function RunMap({
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const runnerMarkerRef = useRef<maplibregl.Marker | null>(null);
+  const [styleKey, setStyleKey] = useState<MapStyleKey>('streets');
+
+  useEffect(() => {
+    setStyleKey(getInitialStyle());
+  }, []);
+
+  const ensureRouteLine = useCallback(
+    (map: maplibregl.Map) => {
+      if (!map.getSource('route-line')) {
+        map.addSource('route-line', {
+          type: 'geojson',
+          data: {
+            type: 'Feature',
+            properties: {},
+            geometry: { type: 'LineString', coordinates },
+          },
+        });
+      }
+      if (!map.getLayer('route-line-layer')) {
+        map.addLayer({
+          id: 'route-line-layer',
+          type: 'line',
+          source: 'route-line',
+          layout: { 'line-join': 'round', 'line-cap': 'round' },
+          paint: { 'line-color': '#1F2A1E', 'line-width': 5 },
+        });
+        if (!map.getLayer('route-line-halo')) {
+          try {
+            map.addLayer(
+              {
+                id: 'route-line-halo',
+                type: 'line',
+                source: 'route-line',
+                layout: { 'line-join': 'round', 'line-cap': 'round' },
+                paint: { 'line-color': '#F7F5EF', 'line-width': 7, 'line-opacity': 0.9 },
+              },
+              'route-line-layer'
+            );
+          } catch {
+            // ignore
+          }
+        }
+      }
+    },
+    [coordinates]
+  );
 
   // Initialize Map
   useEffect(() => {
@@ -54,9 +108,14 @@ export default function RunMap({
       maxLat,
     ];
 
+    const initialStyle =
+      (typeof window !== 'undefined' &&
+        (window.localStorage.getItem(STYLE_STORAGE_KEY) as MapStyleKey | null)) ||
+      'streets';
+    const resolvedStyle: MapStyleKey = initialStyle === 'satellite' ? 'satellite' : 'streets';
     const map = new maplibregl.Map({
       container: mapContainer.current,
-      style: MAP_STYLE,
+      style: MAP_STYLES[resolvedStyle],
       center: [(minLon + maxLon) / 2, (minLat + maxLat) / 2],
       zoom: 14,
       attributionControl: false,
@@ -102,35 +161,7 @@ export default function RunMap({
         duration: 0,
       });
 
-      if (!map.getSource('route-line')) {
-        map.addSource('route-line', {
-          type: 'geojson',
-          data: {
-            type: 'Feature',
-            properties: {},
-            geometry: {
-              type: 'LineString',
-              coordinates: coordinates,
-            },
-          },
-        });
-      }
-
-      if (!map.getLayer('route-line-layer')) {
-        map.addLayer({
-          id: 'route-line-layer',
-          type: 'line',
-          source: 'route-line',
-          layout: {
-            'line-join': 'round',
-            'line-cap': 'round',
-          },
-          paint: {
-            'line-color': '#1F2A1E',
-            'line-width': 5,
-          },
-        });
-      }
+      ensureRouteLine(map);
 
       if (onMapReady) {
         onMapReady(map);
@@ -140,8 +171,18 @@ export default function RunMap({
     if (map.isStyleLoaded()) {
       setupRouteLayer();
     } else {
-      map.once('load', setupRouteLayer);
+      map.once('style.load', setupRouteLayer);
     }
+
+    const handleStyleLoad = () => {
+      ensureRouteLine(map);
+      map.fitBounds(bounds, {
+        padding: { top: 60, bottom: 60, left: 60, right: 60 },
+        maxZoom: 16,
+        duration: 0,
+      });
+    };
+    map.on('style.load', handleStyleLoad);
 
     const resizeObserver = new ResizeObserver(() => {
       map.resize();
@@ -151,11 +192,27 @@ export default function RunMap({
     }
 
     return () => {
+      map.off('style.load', handleStyleLoad);
       resizeObserver.disconnect();
       map.remove();
       mapRef.current = null;
     };
-  }, [coordinates, onMapReady]);
+  }, [coordinates, onMapReady, ensureRouteLine]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const current = (map.getStyle() as unknown as { sources?: Record<string, unknown> })?.sources;
+    const isSatellite = !!current?.['satellite-tiles'];
+    const wantSatellite = styleKey === 'satellite';
+    if (isSatellite === wantSatellite) return;
+    map.setStyle(MAP_STYLES[styleKey]);
+    try {
+      window.localStorage.setItem(STYLE_STORAGE_KEY, styleKey);
+    } catch {
+      // ignore
+    }
+  }, [styleKey]);
 
   // Handle live runner position dot
   useEffect(() => {
@@ -210,10 +267,34 @@ export default function RunMap({
   }, [shouldRecenter, currentPosition, onRecenterComplete]);
 
   return (
-    <div
-      ref={mapContainer}
-      className={`relative overflow-hidden rounded-[8px] border border-contour-tan ${className}`}
-      data-testid="run-map-container"
-    />
+    <div className={`relative overflow-hidden rounded-[8px] border border-contour-tan ${className}`}>
+      <div
+        ref={mapContainer}
+        className="w-full h-full"
+        data-testid="run-map-container"
+      />
+      <div className="absolute bottom-2 left-2 z-10 inline-flex rounded-[4px] border border-contour-tan bg-chalk p-0.5 shadow-sm">
+        <button
+          type="button"
+          onClick={() => setStyleKey('streets')}
+          aria-pressed={styleKey === 'streets'}
+          className={`px-2.5 py-1 rounded-[3px] text-[11px] font-data uppercase tracking-wider transition-colors ${
+            styleKey === 'streets' ? 'bg-ink text-chalk font-bold' : 'text-ink/70 hover:text-ink hover:bg-paper/60'
+          }`}
+        >
+          Streets
+        </button>
+        <button
+          type="button"
+          onClick={() => setStyleKey('satellite')}
+          aria-pressed={styleKey === 'satellite'}
+          className={`px-2.5 py-1 rounded-[3px] text-[11px] font-data uppercase tracking-wider transition-colors ${
+            styleKey === 'satellite' ? 'bg-ink text-chalk font-bold' : 'text-ink/70 hover:text-ink hover:bg-paper/60'
+          }`}
+        >
+          Satellite
+        </button>
+      </div>
+    </div>
   );
 }
