@@ -13,7 +13,7 @@ export function Button({
   ...props
 }: ButtonProps) {
   const baseStyles =
-    'inline-flex items-center justify-center font-display tracking-wider uppercase text-xs px-4 py-2.5 transition-colors cursor-pointer select-none rounded-[4px] disabled:opacity-50 disabled:cursor-not-allowed';
+    'inline-flex items-center justify-center font-display tracking-wider uppercase text-xs px-4 py-2.5 transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] cursor-pointer select-none rounded-[4px] disabled:opacity-50 disabled:cursor-not-allowed';
 
   const variants = {
     primary:
