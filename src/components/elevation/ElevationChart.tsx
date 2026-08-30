@@ -2,6 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { useTranslations } from 'next-intl';
+import { Mountain } from 'lucide-react';
 
 interface ElevationChartProps {
   gpxRaw?: string;
@@ -36,8 +37,12 @@ export function ElevationChart({
 
   if (points.length === 0) {
     return (
-      <div className="p-4 border border-contour-tan rounded-[8px] bg-chalk text-center text-xs font-data text-ink/50">
-        {t('noElevationData')}
+      <div className="p-6 border border-contour-tan rounded-[8px] bg-chalk text-center space-y-2">
+        <div className="w-8 h-8 mx-auto rounded-[4px] bg-paper border border-contour-tan flex items-center justify-center">
+          <Mountain size={16} strokeWidth={1.5} className="text-ink/70" aria-hidden="true" />
+        </div>
+        <p className="text-xs font-data text-ink font-semibold">{t('noElevationData')}</p>
+        <p className="text-xs font-body text-ink/70">{t('noElevationHint') || 'This GPX has no <ele> tags — distance and pace are still available.'}</p>
       </div>
     );
   }
@@ -69,11 +74,11 @@ export function ElevationChart({
 
   return (
     <div className={`space-y-2 ${className}`}>
-      <div className="flex items-center justify-between font-data text-[11px] text-ink/70">
+      <div className="flex items-center justify-between font-data text-xs text-ink">
         <span className="font-bold uppercase tracking-wider">
           {t('elevationProfile')}
         </span>
-        <span>
+        <span aria-label={`Elevation ${Math.round(minEle)} to ${Math.round(maxEle)} meters, gain ${Math.round(eleSpan)}`}>
           {Math.round(minEle)}m — {Math.round(maxEle)}m ({Math.round(eleSpan)}m Δ)
         </span>
       </div>
@@ -82,6 +87,9 @@ export function ElevationChart({
         <svg
           viewBox={`0 0 ${width} ${height}`}
           className="w-full h-24 overflow-visible"
+          role="img"
+          aria-label={`Elevation profile from ${Math.round(minEle)} to ${Math.round(maxEle)} meters over ${(distanceMeters / 1000).toFixed(1)} km`}
+          tabIndex={0}
         >
           {/* Grid lines */}
           <line
@@ -135,11 +143,34 @@ export function ElevationChart({
         </svg>
 
         {/* Distance labels */}
-        <div className="flex justify-between text-[10px] font-data text-ink/50 pt-1 border-t border-contour-tan/40">
+        <div className="flex justify-between text-xs font-data text-ink/70 pt-1 border-t border-contour-tan/40">
           <span>0.0 km</span>
           <span>{(distanceMeters / 1000).toFixed(1)} km</span>
         </div>
       </div>
+
+      <details className="border border-contour-tan rounded-[4px] bg-chalk px-3 py-2">
+        <summary className="cursor-pointer font-data text-xs text-ink/80 hover:text-ink select-none">View elevation data table</summary>
+        <div className="mt-2 max-h-40 overflow-auto">
+          <table className="w-full text-xs font-data">
+            <thead>
+              <tr className="border-b border-contour-tan text-ink/70">
+                <th className="text-left py-1 px-2 font-semibold">Point</th>
+                <th className="text-right py-1 px-2 font-semibold">Elevation (m)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {points.slice(0, 100).map((ele, i) => (
+                <tr key={i} className="border-b border-contour-tan/30 text-ink">
+                  <td className="py-1 px-2">{i + 1}</td>
+                  <td className="py-1 px-2 text-right">{Math.round(ele)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {points.length > 100 && <p className="text-[11px] text-ink/60 mt-1">Showing 100 of {points.length} points.</p>}
+        </div>
+      </details>
     </div>
   );
 }
