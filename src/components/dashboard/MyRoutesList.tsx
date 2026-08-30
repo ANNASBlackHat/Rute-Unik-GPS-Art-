@@ -114,12 +114,12 @@ export function MyRoutesList({ routes }: { routes: MyRouteItem[] }) {
             {/* Bottom Stats */}
             <div className="pt-2 border-t border-contour-tan flex items-center justify-between font-data text-xs text-ink">
               <div>
-                <span className="text-[9px] text-ink/50 block uppercase">
+                <span className="text-[11px] text-ink/70 block uppercase">
                   {distanceKm} km
                 </span>
               </div>
               <div>
-                <span className="text-[9px] text-ink/50 block uppercase">
+                <span className="text-[11px] text-ink/70 block uppercase">
                   {elevation}
                 </span>
               </div>

@@ -153,7 +153,7 @@ export function PendingList({ initialRoutes }: { initialRoutes: PendingRoute[] }
                   {/* Stats Row */}
                   <div className="grid grid-cols-2 gap-2 p-2 bg-paper border border-contour-tan rounded-[4px] font-data text-xs">
                     <div>
-                      <span className="text-[10px] text-ink/60 block uppercase">
+                      <span className="text-[11px] text-ink/70 block uppercase">
                         {t('distance')}
                       </span>
                       <span className="font-semibold text-ink">
@@ -161,7 +161,7 @@ export function PendingList({ initialRoutes }: { initialRoutes: PendingRoute[] }
                       </span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-ink/60 block uppercase">
+                      <span className="text-[11px] text-ink/70 block uppercase">
                         {t('elevation')}
                       </span>
                       <span className="font-semibold text-ink">{elevation}</span>

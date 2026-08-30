@@ -286,7 +286,7 @@ export function RunTracker({ route, coordinates }: RunTrackerProps) {
       <div className="bg-chalk border-t border-contour-tan p-3 z-30 flex items-center justify-between gap-4 font-data select-none">
         <div className="flex items-center gap-4 sm:gap-8">
           <div>
-            <span className="text-[10px] text-ink/50 block uppercase tracking-wider">
+            <span className="text-[11px] text-ink/70 block uppercase tracking-wider">
               {t('elapsedTime')}
             </span>
             <span className="font-display text-lg text-ink font-bold">
@@ -295,7 +295,7 @@ export function RunTracker({ route, coordinates }: RunTrackerProps) {
           </div>
 
           <div>
-            <span className="text-[10px] text-ink/50 block uppercase tracking-wider">
+            <span className="text-[11px] text-ink/70 block uppercase tracking-wider">
               {t('totalDistance')}
             </span>
             <span className="font-display text-lg text-ink font-bold">

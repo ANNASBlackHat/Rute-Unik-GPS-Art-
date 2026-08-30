@@ -205,7 +205,7 @@ export function UploadForm({ cities, locale }: UploadFormProps) {
             {/* Calculated Stats */}
             <div className="space-y-3 font-data text-xs">
               <div className="p-3 bg-paper border border-contour-tan rounded-[4px] space-y-1">
-                <span className="text-[10px] text-ink/60 uppercase block">
+                <span className="text-[11px] text-ink/70 uppercase block">
                   {t('calculatedDistance')}
                 </span>
                 <span className="font-display text-lg text-ink">
@@ -214,7 +214,7 @@ export function UploadForm({ cities, locale }: UploadFormProps) {
               </div>
 
               <div className="p-3 bg-paper border border-contour-tan rounded-[4px] space-y-1">
-                <span className="text-[10px] text-ink/60 uppercase block">
+                <span className="text-[11px] text-ink/70 uppercase block">
                   {t('calculatedElevation')}
                 </span>
                 <span className="font-display text-lg text-ink">

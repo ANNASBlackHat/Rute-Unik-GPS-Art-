@@ -149,7 +149,7 @@ export function DuplicateCompareMap({
         </div>
 
         <div className="text-right">
-          <span className="font-data text-[10px] text-ink/60 uppercase block">
+          <span className="font-data text-[11px] text-ink/70 uppercase block">
             {t('similarityScore')}
           </span>
           <span

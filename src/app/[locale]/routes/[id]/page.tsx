@@ -188,7 +188,7 @@ export default async function RouteDetailPage({
 
             <div className="grid grid-cols-2 gap-4 font-data">
               <div className="bg-paper/40 p-3 rounded-[6px] border border-contour-tan/50">
-                <span className="text-[10px] text-ink/50 block uppercase tracking-wider">
+                <span className="text-[11px] text-ink/70 block uppercase tracking-wider">
                   {tHome('distance')}
                 </span>
                 <span className="font-display text-xl text-ink">
@@ -198,7 +198,7 @@ export default async function RouteDetailPage({
               </div>
 
               <div className="bg-paper/40 p-3 rounded-[6px] border border-contour-tan/50">
-                <span className="text-[10px] text-ink/50 block uppercase tracking-wider">
+                <span className="text-[11px] text-ink/70 block uppercase tracking-wider">
                   {tHome('elevation')}
                 </span>
                 <span className="font-display text-xl text-ink">
@@ -207,7 +207,7 @@ export default async function RouteDetailPage({
               </div>
 
               <div className="bg-paper/40 p-3 rounded-[6px] border border-contour-tan/50">
-                <span className="text-[10px] text-ink/50 block uppercase tracking-wider">
+                <span className="text-[11px] text-ink/70 block uppercase tracking-wider">
                   {t('estPace')}
                 </span>
                 <span className="font-display text-xl text-ink">
@@ -217,7 +217,7 @@ export default async function RouteDetailPage({
               </div>
 
               <div className="bg-paper/40 p-3 rounded-[6px] border border-contour-tan/50">
-                <span className="text-[10px] text-ink/50 block uppercase tracking-wider">
+                <span className="text-[11px] text-ink/70 block uppercase tracking-wider">
                   {t('estDuration')}
                 </span>
                 <span className="font-display text-xl text-ink">
