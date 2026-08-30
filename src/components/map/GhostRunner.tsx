@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import { interpolatePolyline } from '@/lib/geo';
 import { useTranslations } from 'next-intl';
+import { Play, Pause, RotateCcw } from 'lucide-react';
 
 interface GhostRunnerProps {
   map: maplibregl.Map | null;
@@ -172,9 +173,9 @@ export function GhostRunner({
             onClick={handlePlay}
             disabled={prefersReducedMotion}
             aria-label={prefersReducedMotion ? 'Animation disabled (reduced motion)' : undefined}
-            className="min-h-9 px-4 py-2 bg-ink text-chalk rounded-[4px] font-bold uppercase tracking-wider text-xs hover:bg-ink/80 transition-colors select-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            className="min-h-9 px-4 py-2 bg-ink text-chalk rounded-[4px] font-bold uppercase tracking-wider text-xs hover:bg-ink/80 transition-colors select-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
           >
-            ▶ {t('play')}
+            <Play size={14} strokeWidth={1.5} aria-hidden="true" /> {t('play')}
           </button>
         ) : (
           <button
@@ -182,9 +183,9 @@ export function GhostRunner({
             id="btn-ghost-pause"
             data-testid="btn-ghost-pause"
             onClick={handlePause}
-            className="min-h-9 px-4 py-2 bg-contour-tan text-ink rounded-[4px] font-bold uppercase tracking-wider text-xs hover:bg-contour-tan/80 transition-colors select-none cursor-pointer"
+            className="min-h-9 px-4 py-2 bg-contour-tan text-ink rounded-[4px] font-bold uppercase tracking-wider text-xs hover:bg-contour-tan/80 transition-colors select-none cursor-pointer inline-flex items-center gap-1.5"
           >
-            ⏸ {t('pause')}
+            <Pause size={14} strokeWidth={1.5} aria-hidden="true" /> {t('pause')}
           </button>
         )}
 
@@ -193,10 +194,10 @@ export function GhostRunner({
           id="btn-ghost-restart"
           data-testid="btn-ghost-restart"
           onClick={handleRestart}
-          className="min-h-9 px-3 py-2 border border-contour-tan text-ink rounded-[4px] font-bold uppercase tracking-wider text-xs hover:border-ink transition-colors select-none cursor-pointer"
+          className="min-h-9 px-3 py-2 border border-contour-tan text-ink rounded-[4px] font-bold uppercase tracking-wider text-xs hover:border-ink transition-colors select-none cursor-pointer inline-flex items-center gap-1.5"
           title={t('restart')}
         >
-          ↺ {t('restart')}
+          <RotateCcw size={14} strokeWidth={1.5} aria-hidden="true" /> {t('restart')}
         </button>
       </div>
 

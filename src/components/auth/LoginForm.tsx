@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { AlertTriangle } from 'lucide-react';
 
 export function LoginForm({ locale }: { locale: string }) {
   const t = useTranslations('auth');
@@ -67,9 +68,10 @@ export function LoginForm({ locale }: { locale: string }) {
       {errorMsg && (
         <div
           id="auth-error-banner"
-          className="p-3 bg-[#9B2C2C] text-chalk border border-white/20 rounded-[4px] font-body text-xs"
+          role="alert"
+          className="p-3 bg-error text-error-on border border-white/20 rounded-[4px] font-body text-xs flex items-start gap-2"
         >
-          ⚠️ {errorMsg}
+          <AlertTriangle size={16} strokeWidth={1.5} aria-hidden="true" className="shrink-0 mt-0.5" /> <span>{errorMsg}</span>
         </div>
       )}
 

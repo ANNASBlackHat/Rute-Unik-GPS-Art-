@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { isClientVideoExportSupported } from '@/lib/video-capability';
 import { exportRouteVideo } from '@/lib/video-export';
+import { Film, Loader2, Check, Cloud, AlertTriangle } from 'lucide-react';
 
 interface VideoExportButtonProps {
   routeId: string;
@@ -145,18 +146,18 @@ export function VideoExportButton({
         type="button"
         onClick={handleExport}
         disabled={isBusy || coordinates.length < 2}
-        className={`w-full inline-flex items-center justify-center font-display tracking-wider uppercase text-xs px-4 py-2.5 rounded-[4px] border transition-colors select-none ${
+        className={`w-full inline-flex items-center justify-center gap-2 font-display tracking-wider uppercase text-xs px-4 py-2.5 rounded-[4px] border transition-colors select-none ${
           isBusy
             ? 'bg-paper border-contour-tan text-ink/60 cursor-wait'
             : 'bg-ink text-chalk border-ink hover:bg-ink/90'
         } disabled:opacity-50 disabled:cursor-not-allowed`}
       >
-        {state === 'idle' && <>🎬 {t('exportVideo') ?? 'Export Video'}</>}
-        {state === 'checking' && <>⏳ Checking…</>}
-        {state === 'encoding' && <>⏳ {progress}%</>}
-        {state === 'done' && <>✅ Downloaded</>}
-        {state === 'fallback' && <>☁️ Queued (fallback)</>}
-        {state === 'error' && <>⚠️ Retry</>}
+        {state === 'idle' && <><Film size={16} strokeWidth={1.5} aria-hidden="true" /> {t('exportVideo') ?? 'Export Video'}</>}
+        {state === 'checking' && <><Loader2 size={16} strokeWidth={1.5} aria-hidden="true" className="animate-spin" /> Checking…</>}
+        {state === 'encoding' && <><Loader2 size={16} strokeWidth={1.5} aria-hidden="true" className="animate-spin" /> {progress}%</>}
+        {state === 'done' && <><Check size={16} strokeWidth={1.5} aria-hidden="true" /> Downloaded</>}
+        {state === 'fallback' && <><Cloud size={16} strokeWidth={1.5} aria-hidden="true" /> Queued (fallback)</>}
+        {state === 'error' && <><AlertTriangle size={16} strokeWidth={1.5} aria-hidden="true" /> Retry</>}
       </button>
 
       {state === 'encoding' && (

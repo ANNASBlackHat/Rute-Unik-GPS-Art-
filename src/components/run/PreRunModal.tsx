@@ -4,6 +4,7 @@ import React from 'react';
 import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { AlertTriangle } from 'lucide-react';
 
 interface PreRunModalProps {
   isOpen: boolean;
@@ -26,8 +27,8 @@ export function PreRunModal({ isOpen, onStart, onCancel }: PreRunModalProps) {
     >
       <Card className="w-full max-w-md p-6 space-y-5 bg-chalk border border-contour-tan animate-in fade-in zoom-in-95 duration-200">
         <div className="flex items-center gap-3 border-b border-contour-tan pb-3">
-          <div className="w-8 h-8 rounded-[4px] bg-trail-orange/10 border border-trail-orange flex items-center justify-center text-trail-orange font-display text-base">
-            ⚠️
+          <div className="w-8 h-8 rounded-[4px] bg-trail-orange/10 border border-trail-orange flex items-center justify-center text-trail-orange">
+            <AlertTriangle size={16} strokeWidth={1.5} aria-hidden="true" />
           </div>
           <div>
             <h2

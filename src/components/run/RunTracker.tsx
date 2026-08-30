@@ -8,6 +8,7 @@ import { RunMapWrapper } from './RunMapWrapper';
 import { calculateOffRoute } from '@/lib/geo';
 import { GhostRunner } from '@/components/map/GhostRunner';
 import * as maplibregl from 'maplibre-gl';
+import { AlertTriangle, Crosshair, PersonStanding, X } from 'lucide-react';
 
 interface RouteData {
   id: string;
@@ -224,9 +225,10 @@ export function RunTracker({ route, coordinates }: RunTrackerProps) {
         {geoError && (
           <div
             id="geo-error-banner"
-            className="p-3 bg-[#9B2C2C] text-chalk border border-white/20 rounded-[4px] font-body text-xs pointer-events-auto shadow-md"
+            role="alert"
+            className="p-3 bg-error text-error-on border border-white/20 rounded-[4px] font-body text-xs pointer-events-auto shadow-md flex items-start gap-2"
           >
-            ⚠️ {geoError}
+            <AlertTriangle size={16} strokeWidth={1.5} aria-hidden="true" className="shrink-0 mt-0.5" /> <span>{geoError}</span>
           </div>
         )}
       </div>
@@ -250,9 +252,9 @@ export function RunTracker({ route, coordinates }: RunTrackerProps) {
             id="btn-recenter"
             data-testid="btn-recenter"
             onClick={() => setShouldRecenter(true)}
-            className="absolute bottom-24 right-4 z-20 px-3.5 py-2 bg-chalk text-ink border border-contour-tan rounded-[4px] font-display text-xs uppercase tracking-wider shadow-md hover:border-ink transition-colors cursor-pointer select-none"
+            className="absolute bottom-24 right-4 z-20 px-3.5 py-2 bg-chalk text-ink border border-contour-tan rounded-[4px] font-display text-xs uppercase tracking-wider shadow-md hover:border-ink transition-colors cursor-pointer select-none inline-flex items-center gap-1.5"
           >
-            🎯 {t('recenter')}
+            <Crosshair size={14} strokeWidth={1.5} aria-hidden="true" /> {t('recenter')}
           </button>
         )}
 
@@ -262,9 +264,9 @@ export function RunTracker({ route, coordinates }: RunTrackerProps) {
             type="button"
             id="btn-toggle-ghost"
             onClick={() => setShowGhostPreview((v) => !v)}
-            className="px-2.5 py-1.5 bg-chalk text-ink border border-contour-tan rounded-[4px] font-data text-[11px] uppercase tracking-wider hover:border-ink transition-colors shadow-sm select-none cursor-pointer"
+            className="min-h-9 px-3 py-2 bg-chalk text-ink border border-contour-tan rounded-[4px] font-data text-xs uppercase tracking-wider hover:border-ink transition-colors shadow-sm select-none cursor-pointer inline-flex items-center gap-1.5"
           >
-            {showGhostPreview ? `✕ ${t('closeGhost')}` : `🏃 ${t('previewRunner')}`}
+            {showGhostPreview ? <><X size={14} strokeWidth={1.5} aria-hidden="true" /> {t('closeGhost')}</> : <><PersonStanding size={14} strokeWidth={1.5} aria-hidden="true" /> {t('previewRunner')}</>}
           </button>
         </div>
 

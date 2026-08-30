@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { parseGpx, ParsedGpx } from '@/lib/gpx';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { AlertTriangle, Loader2, MapPinned } from 'lucide-react';
 
 interface City {
   id: string;
@@ -125,9 +126,10 @@ export function UploadForm({ cities, locale }: UploadFormProps) {
       {errorMsg && (
         <div
           id="upload-error-banner"
-          className="p-3 bg-[#9B2C2C] text-chalk border border-white/20 rounded-[4px] font-body text-xs"
+          role="alert"
+          className="p-3 bg-error text-error-on border border-white/20 rounded-[4px] font-body text-xs flex items-start gap-2"
         >
-          ⚠️ {errorMsg}
+          <AlertTriangle size={16} strokeWidth={1.5} aria-hidden="true" className="shrink-0 mt-0.5" /> <span>{errorMsg}</span>
         </div>
       )}
 
@@ -160,8 +162,8 @@ export function UploadForm({ cities, locale }: UploadFormProps) {
           }}
         />
 
-        <div className="w-12 h-12 mx-auto rounded-[4px] bg-paper border border-contour-tan flex items-center justify-center text-xl">
-          🗺️
+        <div className="w-12 h-12 mx-auto rounded-[4px] bg-paper border border-contour-tan flex items-center justify-center">
+          <MapPinned size={20} strokeWidth={1.5} className="text-ink" aria-hidden="true" />
         </div>
 
         <div className="space-y-1">

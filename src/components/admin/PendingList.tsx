@@ -46,7 +46,7 @@ export function PendingList({ initialRoutes }: { initialRoutes: PendingRoute[] }
       );
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Action failed';
-      setFeedback(`⚠️ ${msg}`);
+      setFeedback(`${msg}`);
     } finally {
       setActionInProgress(null);
     }
@@ -67,7 +67,7 @@ export function PendingList({ initialRoutes }: { initialRoutes: PendingRoute[] }
       setFeedback(t('rejectedSuccess'));
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Action failed';
-      setFeedback(`⚠️ ${msg}`);
+      setFeedback(`${msg}`);
     } finally {
       setActionInProgress(null);
     }
@@ -126,7 +126,7 @@ export function PendingList({ initialRoutes }: { initialRoutes: PendingRoute[] }
                         data-testid="duplicate-warning-badge"
                         className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] border border-trail-orange/40 bg-trail-orange/10 text-trail-orange font-data text-[10px] font-bold uppercase tracking-wider"
                       >
-                        ⚠️ {t('duplicateDetected')}
+                        {t('duplicateDetected')}
                       </span>
                     )}
                   </div>

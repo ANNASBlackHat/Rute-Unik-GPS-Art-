@@ -54,7 +54,7 @@ export function CatalogManager({
       setFeedback(t('statusUpdatedSuccess'));
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Action failed';
-      setFeedback(`⚠️ ${msg}`);
+      setFeedback(`${msg}`);
     } finally {
       setLoadingId(null);
     }
@@ -82,7 +82,7 @@ export function CatalogManager({
       setFeedback(t('titleUpdatedSuccess'));
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Action failed';
-      setFeedback(`⚠️ ${msg}`);
+      setFeedback(`${msg}`);
     } finally {
       setLoadingId(null);
     }

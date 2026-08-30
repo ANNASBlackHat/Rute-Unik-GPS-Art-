@@ -60,7 +60,7 @@ export function CityManager({ initialCities }: { initialCities: AdminCityItem[] 
       setFeedback(t('cityAddedSuccess'));
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to add city';
-      setFeedback(`⚠️ ${msg}`);
+      setFeedback(`${msg}`);
     } finally {
       setLoading(false);
     }

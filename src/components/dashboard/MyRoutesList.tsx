@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Link } from '@/i18n/routing';
+import { PersonStanding } from 'lucide-react';
 
 export interface MyRouteItem {
   id: string;
@@ -50,8 +51,8 @@ export function MyRoutesList({ routes }: { routes: MyRouteItem[] }) {
   if (routes.length === 0) {
     return (
       <Card className="p-8 sm:p-12 text-center space-y-4 max-w-lg mx-auto">
-        <div className="w-12 h-12 mx-auto rounded-[4px] bg-paper border border-contour-tan flex items-center justify-center text-xl">
-          🏃
+        <div className="w-12 h-12 mx-auto rounded-[4px] bg-paper border border-contour-tan flex items-center justify-center">
+          <PersonStanding size={20} strokeWidth={1.5} className="text-ink" aria-hidden="true" />
         </div>
         <div className="space-y-1">
           <h2 className="font-display text-lg uppercase text-ink">
