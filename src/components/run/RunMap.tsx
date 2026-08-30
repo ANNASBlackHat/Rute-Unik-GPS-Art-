@@ -3,6 +3,9 @@
 import React, { useEffect, useRef } from 'react';
 import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
+import { ensureMaplibreWorker } from '@/lib/maplibre-worker';
+
+ensureMaplibreWorker();
 import { MAP_STYLE } from '@/lib/map-style';
 
 interface RunMapProps {

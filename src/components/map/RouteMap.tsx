@@ -5,6 +5,9 @@ import * as maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { MAP_STYLE } from '@/lib/map-style';
 import { getKilometerMarks } from '@/lib/geo';
+import { ensureMaplibreWorker } from '@/lib/maplibre-worker';
+
+ensureMaplibreWorker();
 
 interface RouteMapProps {
   coordinates: [number, number][]; // [longitude, latitude]
