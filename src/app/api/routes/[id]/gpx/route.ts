@@ -21,6 +21,18 @@ export async function GET(
     return new NextResponse('GPX file not found', { status: 404 });
   }
 
+  // fire-and-forget download counter
+  try {
+    const { Client } = await import('pg');
+    const c = new Client({
+      connectionString: process.env.DATABASE_URL,
+      ssl: process.env.DATABASE_URL?.includes('supabase.co') ? { rejectUnauthorized: false } : undefined,
+    });
+    await c.connect();
+    await c.query('update public.routes set download_count = coalesce(download_count,0)+1 where id=$1', [id]);
+    await c.end().catch(() => {});
+  } catch {}
+
   const safeFilename =
     route.name
       .toLowerCase()

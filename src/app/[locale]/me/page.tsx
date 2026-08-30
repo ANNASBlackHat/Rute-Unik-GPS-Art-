@@ -4,6 +4,7 @@ import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { getAuthUser } from '@/lib/supabase/server';
 import { supabase } from '@/lib/supabase';
 import { MyRoutesList, MyRouteItem } from '@/components/dashboard/MyRoutesList';
+import { ChangePasswordForm } from '@/components/auth/ChangePasswordForm';
 
 export default async function ContributorDashboardPage({
   params,
@@ -61,6 +62,10 @@ export default async function ContributorDashboardPage({
       </div>
 
       <MyRoutesList routes={routes} />
+
+      <div className="pt-8 border-t border-contour-tan">
+        <ChangePasswordForm />
+      </div>
     </div>
   );
 }

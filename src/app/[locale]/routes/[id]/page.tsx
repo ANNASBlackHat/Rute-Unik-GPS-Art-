@@ -8,6 +8,9 @@ import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
 import { Link } from '@/i18n/routing';
 import { VideoExportButton } from '@/components/video/VideoExportButton';
+import { ShareButton, ViewTracker } from '@/components/routes/ShareButton';
+import { DownloadImageButton } from '@/components/routes/DownloadImageButton';
+import { StartRunButton } from '@/components/routes/StartRunButton';
 import { Download, PersonStanding } from 'lucide-react';
 
 export default async function RouteDetailPage({
@@ -136,6 +139,7 @@ export default async function RouteDetailPage({
 
   return (
     <div className="space-y-8 pb-16">
+      <ViewTracker routeId={route.id} />
       {/* Back Navigation Bar */}
       <div className="flex items-center justify-between">
         <Link
@@ -236,12 +240,18 @@ export default async function RouteDetailPage({
                 <Download size={16} strokeWidth={1.5} aria-hidden="true" /> {t('downloadGpx')}
               </a>
 
-              <Link
-                href={`/routes/${route.id}/run`}
-                className="w-full inline-flex items-center justify-center gap-2 font-display tracking-wider uppercase text-xs px-4 py-2.5 rounded-[4px] bg-trail-orange text-chalk hover:bg-[#d44820] transition-colors select-none"
-              >
-                <PersonStanding size={16} strokeWidth={1.5} aria-hidden="true" /> {t('startRun')}
-              </Link>
+              <StartRunButton routeId={route.id} />
+
+              <ShareButton routeId={route.id} routeName={route.name} cityName={cityName} />
+
+              <DownloadImageButton
+                routeName={route.name}
+                cityName={cityName}
+                distanceKm={distanceKm}
+                elevationGain={elevation}
+                thumbnailSvg={route.thumbnail_svg}
+                coordinates={coordinates}
+              />
 
               <VideoExportButton
                 routeId={route.id}

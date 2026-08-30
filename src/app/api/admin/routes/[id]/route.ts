@@ -2,6 +2,27 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminUser } from '@/lib/admin';
 import { Client } from 'pg';
 
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const auth = await requireAdminUser();
+  if (!auth.authorized) return auth.response;
+  const { id } = await params;
+  const client = new Client({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.DATABASE_URL?.includes('supabase.co') ? { rejectUnauthorized: false } : undefined,
+  });
+  await client.connect();
+  try {
+    await client.query('delete from public.route_duplicate_flags where route_id=$1 or candidate_route_id=$1', [id]);
+    await client.query('delete from public.route_views where route_id=$1', [id]).catch(() => {});
+    const res = await client.query('delete from public.routes where id=$1 returning id', [id]);
+    if (res.rows.length === 0) return NextResponse.json({ error: 'Route not found' }, { status: 404 });
+    return NextResponse.json({ ok: true });
+  } finally { await client.end(); }
+}
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }

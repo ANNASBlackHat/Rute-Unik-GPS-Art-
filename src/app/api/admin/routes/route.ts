@@ -16,25 +16,46 @@ export async function GET() {
   await client.connect();
 
   try {
-    const query = `
-      select 
-        r.id,
-        r.name,
-        r.city_id,
-        c.name as city_name,
-        r.status,
-        r.distance_m,
-        r.elevation_gain_m,
-        r.thumbnail_svg,
-        r.created_at,
-        coalesce(p.email, 'Official') as contributor_email
-      from public.routes r
-      left join public.cities c on c.id = r.city_id
-      left join public.profiles p on p.id = r.uploaded_by
-      order by r.created_at desc;
-    `;
-
-    const res = await client.query(query);
+    let res;
+    try {
+      res = await client.query(`
+        select 
+          r.id,
+          r.name,
+          r.city_id,
+          c.name as city_name,
+          r.status,
+          r.distance_m,
+          r.elevation_gain_m,
+          r.thumbnail_svg,
+          r.created_at,
+          coalesce(p.email, 'Official') as contributor_email
+        from public.routes r
+        left join public.cities c on c.id = r.city_id
+        left join public.profiles p on p.id = r.uploaded_by
+        order by r.created_at desc;
+      `);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      if (msg.includes('does not exist')) {
+        res = await client.query(`
+          select 
+            r.id,
+            r.name,
+            r.city_id,
+            c.name as city_name,
+            r.status,
+            r.distance_m,
+            r.elevation_gain_m,
+            r.thumbnail_svg,
+            r.created_at,
+            'Official' as contributor_email
+          from public.routes r
+          left join public.cities c on c.id = r.city_id
+          order by r.created_at desc;
+        `);
+      } else throw e;
+    }
     return NextResponse.json({ routes: res.rows });
   } finally {
     await client.end();

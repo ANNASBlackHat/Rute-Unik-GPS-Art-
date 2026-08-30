@@ -14,6 +14,8 @@ export function AdminNav({ locale }: { locale: string }) {
     { href: '/admin/duplicates', label: t('tabDuplicates') },
     { href: '/admin/cities', label: t('tabCities') },
     { href: '/admin/routes', label: t('tabRoutes') },
+    { href: '/admin/users', label: 'Users' },
+    { href: '/admin/analytics', label: 'Analytics' },
   ];
 
   return (

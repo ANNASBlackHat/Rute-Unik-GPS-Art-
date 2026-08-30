@@ -32,6 +32,20 @@ export function CatalogManager({
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
 
+  const handleRemove = async (id: string) => {
+    if (!confirm('Delete this route permanently? This cannot be undone.')) return;
+    setLoadingId(id);
+    setFeedback(null);
+    try {
+      const res = await fetch(`/api/admin/routes/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Failed to delete');
+      setRoutes((prev) => prev.filter((r) => r.id !== id));
+      setFeedback('Route deleted');
+    } catch (err) {
+      setFeedback(err instanceof Error ? err.message : 'Failed');
+    } finally { setLoadingId(null); }
+  };
+
   const handleStatusChange = async (
     id: string,
     targetStatus: 'official' | 'community' | 'rejected'
@@ -262,6 +276,15 @@ export function CatalogManager({
                           Cabut
                         </Button>
                       )}
+                      <Button
+                        id={`btn-delete-${route.id}`}
+                        variant="secondary"
+                        disabled={loadingId === route.id}
+                        onClick={() => handleRemove(route.id)}
+                        className="text-[10px] py-0.5 px-2 border-error text-error hover:bg-error hover:text-error-on"
+                      >
+                        Hapus
+                      </Button>
                     </div>
                   </td>
                 </tr>

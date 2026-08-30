@@ -42,7 +42,7 @@ export function ElevationChart({
           <Mountain size={16} strokeWidth={1.5} className="text-ink/70" aria-hidden="true" />
         </div>
         <p className="text-xs font-data text-ink font-semibold">{t('noElevationData')}</p>
-        <p className="text-xs font-body text-ink/70">{t('noElevationHint') || 'This GPX has no <ele> tags — distance and pace are still available.'}</p>
+        <p className="text-xs font-body text-ink/70">This GPX has no elevation tags — distance and pace are still available.</p>
       </div>
     );
   }
