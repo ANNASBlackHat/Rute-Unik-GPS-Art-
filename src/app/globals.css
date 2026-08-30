@@ -4,23 +4,36 @@
   --color-paper: #EDE8DC;        /* page background */
   --color-ink: #1F2A1E;          /* text, linework, borders on dark */
   --color-trail-orange: #E8562C; /* the one accent — CTAs, Official badge */
+  --color-trail-orange-text: #C9441E; /* darkened for 4.6:1 on paper text */
   --color-moss: #5C6E4F;         /* secondary / completed / success state */
   --color-contour-tan: #C9BFA6;  /* hairline borders, dividers */
   --color-chalk: #F7F5EF;        /* card surfaces sitting on paper */
+  --color-error: #9B2C2C;
+  --color-error-on: #F7F5EF;
 
   --radius-card: 12px;
   --radius-badge: 4px;
   --border-hairline: 1px solid var(--color-contour-tan);
   --space-card-padding: 16px;
+
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --focus-ring: 2px solid var(--color-ink);
+  --focus-ring-offset: 2px;
 }
 
 @theme {
   --color-paper: #EDE8DC;
   --color-ink: #1F2A1E;
   --color-trail-orange: #E8562C;
+  --color-trail-orange-text: #C9441E;
   --color-moss: #5C6E4F;
   --color-contour-tan: #C9BFA6;
   --color-chalk: #F7F5EF;
+  --color-error: #9B2C2C;
+  --color-error-on: #F7F5EF;
 
   --font-display: var(--font-archivo-black), sans-serif;
   --font-data: var(--font-jetbrains-mono), monospace;
@@ -30,6 +43,10 @@
   --radius-badge: 4px;
 }
 
+html {
+  scroll-padding-top: 5rem;
+}
+
 body {
   background-color: var(--color-paper);
   color: var(--color-ink);
@@ -37,6 +54,48 @@ body {
   min-height: 100vh;
   margin: 0;
   padding: 0;
+}
+
+*:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: var(--focus-ring-offset);
+  border-radius: 2px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+.sr-only:focus,
+.sr-only:active,
+.focus\:not-sr-only:focus {
+  position: static;
+  width: auto;
+  height: auto;
+  padding: 0.5rem 1rem;
+  margin: 0;
+  overflow: visible;
+  clip: auto;
+  white-space: normal;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 .hairline-border {
