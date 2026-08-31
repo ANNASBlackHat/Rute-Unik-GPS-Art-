@@ -28,21 +28,32 @@ export function RouteCard({ route }: RouteCardProps) {
     { minimumFractionDigits: 1, maximumFractionDigits: 1 }
   );
   const elevation = route.elevation_gain_m ? `+${Math.round(route.elevation_gain_m)} m` : '--';
+  const isPending = route.status === 'pending';
 
   return (
     <Link
       href={`/routes/${route.id}`}
-      className="block group no-underline text-inherit"
+      className={`block group no-underline text-inherit ${isPending ? 'opacity-60 grayscale-[0.3]' : ''}`}
     >
-      <Card className="h-full flex flex-col justify-between hover:border-ink transition-colors cursor-pointer">
+      <Card
+        className={`h-full flex flex-col justify-between transition-colors cursor-pointer ${
+          isPending ? 'border-dashed bg-chalk/60 hover:border-ink/30' : 'hover:border-ink'
+        }`}
+      >
         <div>
           {/* Top meta row */}
           <div className="flex justify-between items-center mb-3">
             <span className="text-[11px] font-data text-ink/70 uppercase tracking-wider font-semibold">
               {route.city_name || 'CITY'}
             </span>
-            <Badge variant={route.status}>
-              {route.status === 'official' ? t('official') : t('community')}
+            <Badge variant={isPending ? 'pending' : route.status}>
+              {isPending
+                ? locale === 'id'
+                  ? 'Menunggu'
+                  : 'Pending'
+                : route.status === 'official'
+                  ? t('official')
+                  : t('community')}
             </Badge>
           </div>
 

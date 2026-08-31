@@ -126,6 +126,9 @@ export async function POST(request: NextRequest) {
     }
 
     try {
+      // Auto-approve if uploader is admin, otherwise pending
+      const initialStatus = user.role === 'admin' ? 'official' : 'pending';
+
       // Insert new route
       const insertSql = `
         insert into public.routes (
@@ -147,8 +150,8 @@ export async function POST(request: NextRequest) {
           $5,
           $6,
           $7,
-          'pending',
-          $8
+          $8,
+          $9
         )
         returning id;
       `;
@@ -161,6 +164,7 @@ export async function POST(request: NextRequest) {
         parsed.thumbnailSvg,
         parsed.distanceMeters,
         parsed.elevationGainMeters,
+        initialStatus,
         user.id,
       ]);
 

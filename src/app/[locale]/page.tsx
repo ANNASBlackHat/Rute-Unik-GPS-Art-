@@ -22,7 +22,7 @@ export default async function HomePage({
   const tCommon = await getTranslations('common');
   const tTokens = await getTranslations('designTokens');
 
-  // Fetch cities and routes from Supabase
+  // Fetch cities and routes from Supabase - hide rejected, pending at bottom
   const [citiesRes, routesRes] = await Promise.all([
     supabase.from('cities').select('id, name, country').order('name'),
     supabase
@@ -35,10 +35,12 @@ export default async function HomePage({
         elevation_gain_m,
         status,
         thumbnail_svg,
+        created_at,
         cities (
           name
         )
       `)
+      .neq('status', 'rejected')
       .order('created_at', { ascending: false }),
   ]);
 
@@ -47,7 +49,7 @@ export default async function HomePage({
     name: c.name,
   }));
 
-  const routes: RouteItem[] = (routesRes.data || []).map((r) => ({
+  const rawRoutes: RouteItem[] = (routesRes.data || []).map((r) => ({
     id: r.id,
     name: r.name,
     city_id: r.city_id,
@@ -58,6 +60,14 @@ export default async function HomePage({
     status: r.status as RouteItem['status'],
     thumbnail_svg: r.thumbnail_svg,
   }));
+
+  // Sort: official/community first (by newest), pending at bottom (unverified)
+  const statusOrder: Record<string, number> = { official: 0, community: 1, pending: 2 };
+  const routes: RouteItem[] = [...rawRoutes].sort((a, b) => {
+    const ao = statusOrder[a.status] ?? 2;
+    const bo = statusOrder[b.status] ?? 2;
+    return ao - bo;
+  });
 
   return (
     <div className="space-y-12 pb-16">
