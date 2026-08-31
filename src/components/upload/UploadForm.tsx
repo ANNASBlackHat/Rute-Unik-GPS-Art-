@@ -6,12 +6,17 @@ import { useTranslations } from 'next-intl';
 import { parseGpx, ParsedGpx } from '@/lib/gpx';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { AlertTriangle, Loader2, MapPinned } from 'lucide-react';
+import { AlertTriangle, Loader2, MapPinned, Lock } from 'lucide-react';
+import { findNearestCity, centroidOfCoordinates, CityWithCenter } from '@/lib/city';
 
 interface City {
   id: string;
   name: string;
+  lon: number | null;
+  lat: number | null;
 }
+
+type PropsCity = CityWithCenter;
 
 interface UploadFormProps {
   cities: City[];
@@ -30,12 +35,16 @@ export function UploadForm({ cities, locale }: UploadFormProps) {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [autoDetected, setAutoDetected] = useState<{ city: CityWithCenter; distanceMeters: number } | null>(null);
+  const [autoDetectFailed, setAutoDetectFailed] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const errorSummaryRef = useRef<HTMLDivElement>(null);
 
   const handleFileProcess = (file: File) => {
     setErrorMsg(null);
+    setAutoDetected(null);
+    setAutoDetectFailed(false);
     if (!file.name.toLowerCase().endsWith('.gpx')) {
       setErrorMsg(t('invalidGpxError'));
       return;
@@ -50,6 +59,21 @@ export function UploadForm({ cities, locale }: UploadFormProps) {
       try {
         const result = parseGpx(content);
         setParsed(result);
+
+        // Auto-detect city from GPX centroid
+        const centroid = centroidOfCoordinates(result.coordinates);
+        if (centroid) {
+          const nearest = findNearestCity(centroid, cities as CityWithCenter[]);
+          if (nearest) {
+            setCityId(nearest.city.id);
+            setAutoDetected(nearest);
+            setAutoDetectFailed(false);
+          } else {
+            setAutoDetected(null);
+            setAutoDetectFailed(true);
+          }
+        }
+
         if (!name) {
           // Suggest name from file or gpx trk name
           const nameMatch = /<name>([\s\S]*?)<\/name>/i.exec(content);
@@ -63,6 +87,8 @@ export function UploadForm({ cities, locale }: UploadFormProps) {
         const message = err instanceof Error ? err.message : t('invalidGpxError');
         setErrorMsg(message);
         setParsed(null);
+        setAutoDetected(null);
+        setAutoDetectFailed(false);
       }
     };
     reader.readAsText(file);
@@ -297,23 +323,79 @@ export function UploadForm({ cities, locale }: UploadFormProps) {
         </div>
 
         <div className="space-y-1 font-data text-xs">
-          <label htmlFor="select-route-city" className="block uppercase text-ink/70 font-semibold text-[11px]">
+          <label htmlFor="select-route-city" className="block uppercase text-ink/70 font-semibold text-[11px] flex items-center gap-1.5">
             {t('citySelectLabel')} <span aria-hidden="true">*</span>
+            {autoDetected && <span className="inline-flex items-center gap-1 text-moss font-bold text-[10px]"><Lock size={12} /> AUTO</span>}
           </label>
-          <select
-            id="select-route-city"
-            required
-            aria-required="true"
-            value={cityId}
-            onChange={(e) => setCityId(e.target.value)}
-            className="w-full px-3 py-2.5 bg-paper border border-contour-tan rounded-[4px] font-data text-xs text-ink focus:outline-none focus:border-ink cursor-pointer"
-          >
-            {cities.map((city) => (
-              <option key={city.id} value={city.id}>
-                {city.name}
-              </option>
-            ))}
-          </select>
+          {!parsed ? (
+            <div className="w-full px-3 py-2.5 bg-paper/60 border border-dashed border-contour-tan rounded-[4px] text-ink/50 flex items-center gap-2">
+              <Lock size={14} className="shrink-0" />
+              <span>{locale === 'id' ? 'Unggah GPX untuk deteksi otomatis kota' : 'Upload GPX to auto-detect city'}</span>
+            </div>
+          ) : autoDetected ? (
+            <>
+              <div className="w-full px-3 py-2.5 bg-moss/10 border border-moss/30 rounded-[4px] flex items-center justify-between">
+                <span className="font-display text-sm uppercase text-ink flex items-center gap-2">
+                  <MapPinned size={16} className="text-moss" />
+                  {autoDetected.city.name}
+                </span>
+                <span className="text-[11px] text-ink/60">
+                  {(autoDetected.distanceMeters / 1000).toFixed(1)} km {locale === 'id' ? 'dari pusat kota' : 'from center'}
+                </span>
+              </div>
+              <p className="text-[11px] text-moss flex items-center gap-1">
+                <Lock size={12} /> {locale === 'id' ? 'Kota terkunci otomatis dari GPX' : 'City locked from GPX'}
+              </p>
+              {/* Keep hidden select for form consistency but locked */}
+              <select id="select-route-city" value={cityId} onChange={() => {}} disabled className="hidden">
+                {cities.map((city) => (
+                  <option key={city.id} value={city.id}>
+                    {city.name}
+                  </option>
+                ))}
+              </select>
+            </>
+          ) : autoDetectFailed ? (
+            <>
+              <div className="p-2 bg-error/10 border border-error/30 rounded-[4px] text-error text-[11px] flex items-start gap-2">
+                <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+                <span>
+                  {locale === 'id'
+                    ? 'GPX jauh dari semua kota (>100km). Pilih manual.'
+                    : 'GPX far from all cities (>100km). Please select manually.'}
+                </span>
+              </div>
+              <select
+                id="select-route-city"
+                required
+                aria-required="true"
+                value={cityId}
+                onChange={(e) => setCityId(e.target.value)}
+                className="w-full px-3 py-2.5 bg-paper border border-contour-tan rounded-[4px] font-data text-xs text-ink focus:outline-none focus:border-ink cursor-pointer"
+              >
+                {cities.map((city) => (
+                  <option key={city.id} value={city.id}>
+                    {city.name}
+                  </option>
+                ))}
+              </select>
+            </>
+          ) : (
+            <select
+              id="select-route-city"
+              required
+              aria-required="true"
+              value={cityId}
+              onChange={(e) => setCityId(e.target.value)}
+              className="w-full px-3 py-2.5 bg-paper border border-contour-tan rounded-[4px] font-data text-xs text-ink focus:outline-none focus:border-ink cursor-pointer"
+            >
+              {cities.map((city) => (
+                <option key={city.id} value={city.id}>
+                  {city.name}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
         <div className="pt-3 border-t border-contour-tan flex items-center justify-end">

@@ -92,6 +92,38 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Server-side auto-detect city from GPX centroid (authoritative, prevents client spoofing)
+    let finalCityId = city_id;
+    try {
+      const centroidLon = parsed.coordinates.reduce((sum, [lon]) => sum + lon, 0) / parsed.coordinates.length;
+      const centroidLat = parsed.coordinates.reduce((sum, [, lat]) => sum + lat, 0) / parsed.coordinates.length;
+      const nearestRes = await pgClient.query(
+        `
+        select id, name, ST_Distance(center_point::geography, ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography) as dist
+        from cities
+        where center_point is not null
+        order by center_point::geography <-> ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography
+        limit 1;
+        `,
+        [centroidLon, centroidLat]
+      );
+      if (nearestRes.rows.length > 0) {
+        const nearest = nearestRes.rows[0];
+        const dist = Number(nearest.dist);
+        // Only auto-override if within 100km, otherwise keep client-provided (fallback for remote GPX)
+        if (dist < 100_000) {
+          if (nearest.id !== city_id) {
+            console.log(`Auto-detected city override: ${nearest.name} (${(dist/1000).toFixed(1)}km) vs provided ${city_id}`);
+          }
+          finalCityId = nearest.id;
+        } else {
+          console.warn(`GPX centroid far from nearest city ${nearest.name} (${(dist/1000).toFixed(1)}km), keeping provided ${city_id}`);
+        }
+      }
+    } catch (e) {
+      console.warn('City auto-detect failed, keeping provided city_id', e);
+    }
+
     try {
       // Insert new route
       const insertSql = `
@@ -122,7 +154,7 @@ export async function POST(request: NextRequest) {
 
       const insertRes = await pgClient.query(insertSql, [
         name,
-        city_id,
+        finalCityId,
         parsed.wktLineString,
         gpx_raw,
         parsed.thumbnailSvg,
