@@ -6,11 +6,26 @@ import { updateSession } from './lib/supabase/middleware';
 const intlMiddleware = createMiddleware(routing);
 
 export default async function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+
+  // Handle locale-prefixed auth callback (e.g., /id/auth/callback from old redirects) -> redirect to /auth/callback
+  if (/^\/(id|en)\/auth\/callback/.test(pathname)) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/auth/callback';
+    return NextResponse.redirect(url);
+  }
+
+  // Bypass i18n for auth callback (must stay at /auth/callback, not /id/auth/callback)
+  if (pathname.startsWith('/auth/') || pathname === '/auth') {
+    let response = NextResponse.next();
+    const { response: supabaseResponse } = await updateSession(request, response);
+    return supabaseResponse;
+  }
+
   // 1. Run i18n middleware
   let response = intlMiddleware(request);
 
   // 2. Check if the target route requires authentication or admin privileges
-  const pathname = request.nextUrl.pathname;
   const match = pathname.match(/^\/(id|en)/);
   const locale = match ? match[1] : 'id';
 
@@ -41,6 +56,6 @@ export default async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Match only internationalized pathnames, excluding api and static files
-  matcher: ['/((?!api|_next|_vercel|.*\\..*).*)'],
+  // Match only internationalized pathnames, excluding api, auth and static files
+  matcher: ['/((?!api|auth|_next|_vercel|.*\\..*).*)'],
 };
