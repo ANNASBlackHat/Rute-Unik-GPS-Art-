@@ -212,7 +212,7 @@ export function UploadForm({ cities, locale }: UploadFormProps) {
             fileInputRef.current?.click();
           }
         }}
-        className={`p-6 sm:p-8 rounded-[8px] border-2 border-dashed transition-colors cursor-pointer text-center space-y-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 ${
+        className={`relative p-6 sm:p-8 rounded-[8px] border-2 border-dashed transition-colors cursor-pointer text-center space-y-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 ${
           isDragging
             ? 'border-trail-orange bg-trail-orange/5'
             : 'border-contour-tan bg-chalk hover:border-ink/50'
@@ -223,10 +223,13 @@ export function UploadForm({ cities, locale }: UploadFormProps) {
           type="file"
           id="gpx-file-input"
           accept=".gpx"
-          className="hidden"
+          tabIndex={-1}
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
           onChange={(e) => {
             if (e.target.files && e.target.files[0]) {
               handleFileProcess(e.target.files[0]);
+              // Reset so same file can be selected again
+              e.target.value = '';
             }
           }}
         />
