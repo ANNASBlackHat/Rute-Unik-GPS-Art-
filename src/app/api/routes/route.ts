@@ -35,14 +35,62 @@ export async function POST(request: NextRequest) {
     }
 
     // 2. Insert into PostgreSQL via pg client to handle ST_GeomFromText directly
-    const connectionString = process.env.DATABASE_URL;
-    const isRemote = connectionString?.includes('supabase.co');
-    const pgClient = new Client({
-      connectionString,
-      ssl: isRemote ? { rejectUnauthorized: false } : undefined,
-    });
+    // Try primary DATABASE_URL, fallback to pooler if ENOTFOUND (common when direct db host not resolvable in prod)
+    const primaryConn = process.env.DATABASE_URL;
+    const fallbackConn =
+      process.env.DATABASE_POOLER_URL ||
+      process.env.POSTGRES_URL ||
+      (() => {
+        // Auto-derive pooler URL from direct host (e.g., db.<project>.supabase.co -> pooler)
+        if (!primaryConn) return null;
+        try {
+          const url = new URL(primaryConn);
+          const host = url.hostname;
+          const m = host.match(/^db\.([^.]+)\.supabase\.co$/);
+          if (!m) return null;
+          const project = m[1];
+          const password = url.password;
+          const user = url.username;
+          // Supabase pooler for ap-southeast-1 (most common for this project)
+          // Try transaction mode 6543 with pgbouncer
+          return `postgresql://${user}.${project}:${password}@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres?pgbouncer=true`;
+        } catch {
+          return null;
+        }
+      })();
 
-    await pgClient.connect();
+    const tryConnect = async (connStr: string | undefined | null) => {
+      if (!connStr) throw new Error('DATABASE_URL is not set');
+      const isRemote = connStr.includes('supabase.co') || connStr.includes('pooler.supabase.com');
+      const client = new Client({
+        connectionString: connStr,
+        ssl: isRemote ? { rejectUnauthorized: false } : undefined,
+        connectionTimeoutMillis: 5000,
+      });
+      await client.connect();
+      return client;
+    };
+
+    let pgClient: Client;
+    try {
+      pgClient = await tryConnect(primaryConn);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '';
+      const isDnsError = msg.includes('ENOTFOUND') || msg.includes('getaddrinfo');
+      if (isDnsError && fallbackConn) {
+        console.warn('Primary DB connection failed with ENOTFOUND, trying fallback pooler', msg);
+        pgClient = await tryConnect(fallbackConn);
+      } else if (isDnsError) {
+        console.error('DB ENOTFOUND - check DATABASE_URL and Supabase project host. Primary:', primaryConn?.replace(/:[^:@]*@/, ':***@'));
+        throw new Error(
+          `Database connection failed (ENOTFOUND ${primaryConn?.split('@')[1]?.split('/')[0] || 'unknown host'}). ` +
+            `Check production DATABASE_URL and that Supabase project is not paused. ` +
+            `Try using the pooler URL (aws-0-...pooler.supabase.com:6543) as DATABASE_POOLER_URL. Original: ${msg}`
+        );
+      } else {
+        throw err;
+      }
+    }
 
     try {
       // Insert new route
