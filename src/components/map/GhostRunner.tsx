@@ -10,6 +10,8 @@ interface GhostRunnerProps {
   map: maplibregl.Map | null;
   coordinates: [number, number][];
   durationSeconds?: number;
+  progress?: number;
+  onProgressChange?: (progress: number) => void;
   className?: string;
 }
 
@@ -17,11 +19,17 @@ export function GhostRunner({
   map,
   coordinates,
   durationSeconds = 20,
+  progress: externalProgress,
+  onProgressChange,
   className = '',
 }: GhostRunnerProps) {
   const t = useTranslations('runMode');
   const [isPlaying, setIsPlaying] = useState(false);
-  const [progress, setProgress] = useState(0); // 0 to 1
+  const [internalProgress, setInternalProgress] = useState(0); // 0 to 1
+  const [speed, setSpeed] = useState<1 | 2 | 4>(1);
+
+  const activeProgress =
+    typeof externalProgress === 'number' ? externalProgress : internalProgress;
 
   const markerRef = useRef<maplibregl.Marker | null>(null);
   const animFrameRef = useRef<number | null>(null);
@@ -39,7 +47,7 @@ export function GhostRunner({
     const el = document.createElement('div');
     el.className = 'ghost-runner-marker';
     el.innerHTML = `
-      <div style="width: 32px; height: 32px; border-radius: 50%; background-color: #E8562C; color: #F7F5EF; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; border: 2px solid #F7F5EF; box-shadow: 0 2px 6px rgba(0,0,0,0.35); z-index: 20;" title="Ghost Runner" aria-label="Ghost runner position">
+      <div style="width: 30px; height: 30px; border-radius: 50%; background-color: #E8562C; color: #F7F5EF; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; border: 2px solid #F7F5EF; box-shadow: 0 2px 6px rgba(0,0,0,0.35); z-index: 20;" title="Ghost Runner" aria-label="Ghost runner position">
         ●
       </div>
     `;
@@ -66,6 +74,25 @@ export function GhostRunner({
     [coordinates]
   );
 
+  // Sync external progress to marker
+  useEffect(() => {
+    if (typeof externalProgress === 'number') {
+      pausedProgressRef.current = externalProgress;
+      setMarkerPosition(externalProgress);
+    }
+  }, [externalProgress, setMarkerPosition]);
+
+  const updateProgress = useCallback(
+    (newProgress: number) => {
+      setInternalProgress(newProgress);
+      setMarkerPosition(newProgress);
+      if (onProgressChange) {
+        onProgressChange(newProgress);
+      }
+    },
+    [onProgressChange, setMarkerPosition]
+  );
+
   const stepRef = useRef<((timestamp: number) => void) | null>(null);
 
   const step = useCallback(
@@ -75,13 +102,13 @@ export function GhostRunner({
       }
 
       const elapsed = (timestamp - startTimeRef.current) / 1000;
+      const effectiveDuration = durationSeconds / speed;
       const currentT = Math.min(
         1,
-        pausedProgressRef.current + elapsed / durationSeconds
+        pausedProgressRef.current + elapsed / effectiveDuration
       );
 
-      setProgress(currentT);
-      setMarkerPosition(currentT);
+      updateProgress(currentT);
 
       if (currentT < 1) {
         if (stepRef.current) {
@@ -92,7 +119,7 @@ export function GhostRunner({
         pausedProgressRef.current = 1;
       }
     },
-    [durationSeconds, setMarkerPosition]
+    [durationSeconds, speed, updateProgress]
   );
 
   useEffect(() => {
@@ -103,10 +130,11 @@ export function GhostRunner({
     if (isPlaying) return;
     if (prefersReducedMotion) return;
 
-    if (progress >= 1) {
+    if (activeProgress >= 1) {
       pausedProgressRef.current = 0;
-      setProgress(0);
-      setMarkerPosition(0);
+      updateProgress(0);
+    } else {
+      pausedProgressRef.current = activeProgress;
     }
 
     startTimeRef.current = null;
@@ -121,7 +149,7 @@ export function GhostRunner({
       cancelAnimationFrame(animFrameRef.current);
       animFrameRef.current = null;
     }
-    pausedProgressRef.current = progress;
+    pausedProgressRef.current = activeProgress;
     startTimeRef.current = null;
     setIsPlaying(false);
   };
@@ -133,10 +161,22 @@ export function GhostRunner({
     }
     startTimeRef.current = null;
     pausedProgressRef.current = 0;
-    setProgress(0);
-    setMarkerPosition(0);
+    updateProgress(0);
     setIsPlaying(true);
     animFrameRef.current = requestAnimationFrame(step);
+  };
+
+  const handleScrubberClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const clickX = e.clientX - rect.left;
+    const newT = Math.max(0, Math.min(1, clickX / rect.width));
+
+    if (isPlaying) {
+      handlePause();
+    }
+    pausedProgressRef.current = newT;
+    updateProgress(newT);
   };
 
   useEffect(() => {
@@ -147,8 +187,8 @@ export function GhostRunner({
     };
   }, []);
 
-  const progressPercent = Math.round(progress * 100);
-  const elapsedSecs = Math.round(progress * durationSeconds);
+  const progressPercent = Math.round(activeProgress * 100);
+  const elapsedSecs = Math.round(activeProgress * durationSeconds);
   const elapsedFormatted = `00:${elapsedSecs < 10 ? '0' : ''}${elapsedSecs}`;
 
   return (
@@ -157,13 +197,18 @@ export function GhostRunner({
       data-testid="ghost-runner-controls"
       className={`p-3 bg-chalk border border-contour-tan rounded-[8px] flex flex-wrap items-center justify-between gap-3 font-data text-xs ${className}`}
     >
+      {/* Title with live pulse */}
       <div className="flex items-center gap-2">
-        <span className="w-2.5 h-2.5 rounded-full bg-trail-orange motion-safe:animate-pulse" aria-hidden="true" />
+        <span
+          className="w-2.5 h-2.5 rounded-full bg-trail-orange motion-safe:animate-pulse"
+          aria-hidden="true"
+        />
         <span className="font-display text-xs uppercase tracking-wider text-ink">
           {t('ghostRunnerTitle')}
         </span>
       </div>
 
+      {/* Playback Actions + Speed Multiplier */}
       <div className="flex items-center gap-2">
         {!isPlaying ? (
           <button
@@ -172,10 +217,14 @@ export function GhostRunner({
             data-testid="btn-ghost-play"
             onClick={handlePlay}
             disabled={prefersReducedMotion}
-            aria-label={prefersReducedMotion ? 'Animation disabled (reduced motion)' : undefined}
-            className="min-h-9 px-4 py-2 bg-ink text-chalk rounded-[4px] font-bold uppercase tracking-wider text-xs hover:bg-ink/80 transition-colors select-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
+            aria-label={
+              prefersReducedMotion
+                ? 'Animation disabled (reduced motion)'
+                : undefined
+            }
+            className="min-h-8 px-3.5 py-1.5 bg-ink text-chalk rounded-[4px] font-bold uppercase tracking-wider text-xs hover:bg-ink/80 transition-colors select-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed inline-flex items-center gap-1.5"
           >
-            <Play size={14} strokeWidth={1.5} aria-hidden="true" /> {t('play')}
+            <Play size={13} strokeWidth={2} aria-hidden="true" /> {t('play')}
           </button>
         ) : (
           <button
@@ -183,9 +232,9 @@ export function GhostRunner({
             id="btn-ghost-pause"
             data-testid="btn-ghost-pause"
             onClick={handlePause}
-            className="min-h-9 px-4 py-2 bg-contour-tan text-ink rounded-[4px] font-bold uppercase tracking-wider text-xs hover:bg-contour-tan/80 transition-colors select-none cursor-pointer inline-flex items-center gap-1.5"
+            className="min-h-8 px-3.5 py-1.5 bg-contour-tan text-ink rounded-[4px] font-bold uppercase tracking-wider text-xs hover:bg-contour-tan/80 transition-colors select-none cursor-pointer inline-flex items-center gap-1.5"
           >
-            <Pause size={14} strokeWidth={1.5} aria-hidden="true" /> {t('pause')}
+            <Pause size={13} strokeWidth={2} aria-hidden="true" /> {t('pause')}
           </button>
         )}
 
@@ -194,23 +243,50 @@ export function GhostRunner({
           id="btn-ghost-restart"
           data-testid="btn-ghost-restart"
           onClick={handleRestart}
-          className="min-h-9 px-3 py-2 border border-contour-tan text-ink rounded-[4px] font-bold uppercase tracking-wider text-xs hover:border-ink transition-colors select-none cursor-pointer inline-flex items-center gap-1.5"
+          className="min-h-8 px-2.5 py-1.5 border border-contour-tan text-ink rounded-[4px] font-bold uppercase tracking-wider text-xs hover:border-ink transition-colors select-none cursor-pointer inline-flex items-center gap-1"
           title={t('restart')}
         >
-          <RotateCcw size={14} strokeWidth={1.5} aria-hidden="true" /> {t('restart')}
+          <RotateCcw size={13} strokeWidth={2} aria-hidden="true" />
         </button>
+
+        {/* Speed Selector (1x / 2x / 4x) */}
+        <div
+          className="inline-flex rounded-[4px] border border-contour-tan bg-paper/50 p-0.5"
+          role="group"
+          aria-label="Playback speed"
+        >
+          {([1, 2, 4] as const).map((s) => (
+            <button
+              key={s}
+              type="button"
+              id={`btn-speed-${s}x`}
+              onClick={() => setSpeed(s)}
+              className={`min-h-7 px-2 py-0.5 rounded-[3px] text-[11px] font-data font-bold transition-colors cursor-pointer select-none ${
+                speed === s
+                  ? 'bg-ink text-chalk'
+                  : 'text-ink/60 hover:text-ink'
+              }`}
+            >
+              {s}x
+            </button>
+          ))}
+        </div>
       </div>
 
+      {/* Scrubber Progress Bar */}
       <div className="flex items-center gap-3 w-full sm:w-auto">
-        {/* Progress Bar */}
-        <div className="flex-1 sm:w-28 h-2 bg-paper rounded-full overflow-hidden border border-contour-tan/60">
+        <div
+          onClick={handleScrubberClick}
+          className="flex-1 sm:w-32 h-3 bg-paper rounded-full overflow-hidden border border-contour-tan/60 cursor-pointer relative group"
+          title="Click to scrub"
+        >
           <div
             className="h-full bg-trail-orange transition-all duration-75"
             style={{ width: `${progressPercent}%` }}
           />
         </div>
 
-        <span className="text-xs text-ink min-w-[50px] text-right">
+        <span className="text-xs text-ink min-w-[50px] text-right font-data font-bold">
           {progressPercent}% · {elapsedFormatted}
         </span>
       </div>

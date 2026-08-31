@@ -3,6 +3,8 @@ import { Link } from '@/i18n/routing';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { useTranslations, useLocale } from 'next-intl';
+import { ElevationSparkline } from './ElevationSparkline';
+import { type ShapeCategory } from '@/lib/shape-category';
 
 export interface RouteItem {
   id: string;
@@ -13,6 +15,10 @@ export interface RouteItem {
   elevation_gain_m?: number | null;
   status: 'official' | 'community' | 'pending' | 'rejected';
   thumbnail_svg: string;
+  shape_category?: ShapeCategory;
+  elevation_points?: number[];
+  download_count?: number;
+  created_at?: string;
 }
 
 interface RouteCardProps {
@@ -69,6 +75,9 @@ export function RouteCard({ route }: RouteCardProps) {
               dangerouslySetInnerHTML={{ __html: route.thumbnail_svg }}
             />
           </div>
+
+          {/* Miniature elevation profile sparkline (flat vs hilly at a glance) */}
+          <ElevationSparkline points={route.elevation_points} className="mb-3" />
 
           {/* Route Name in Archivo Black uppercase */}
           <h2 className="font-display text-lg tracking-tight uppercase text-ink group-hover:text-trail-orange-text transition-colors">

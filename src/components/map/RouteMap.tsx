@@ -6,6 +6,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import { MAP_STYLES, type MapStyleKey } from '@/lib/map-style';
 import { getKilometerMarks } from '@/lib/geo';
 import { ensureMaplibreWorker } from '@/lib/maplibre-worker';
+import { Maximize2 } from 'lucide-react';
 
 ensureMaplibreWorker();
 
@@ -13,8 +14,12 @@ const STYLE_STORAGE_KEY = 'rute-unik:map-style';
 
 function getInitialStyle(): MapStyleKey {
   if (typeof window === 'undefined') return 'streets';
-  const saved = window.localStorage.getItem(STYLE_STORAGE_KEY) as MapStyleKey | null;
-  return saved === 'satellite' ? 'satellite' : 'streets';
+  try {
+    const saved = window.localStorage.getItem(STYLE_STORAGE_KEY) as MapStyleKey | null;
+    return saved === 'satellite' ? 'satellite' : 'streets';
+  } catch {
+    return 'streets';
+  }
 }
 
 interface RouteMapProps {
@@ -22,6 +27,8 @@ interface RouteMapProps {
   className?: string;
   interactive?: boolean;
   onMapReady?: (map: maplibregl.Map) => void;
+  onWaypointClick?: (km: number) => void;
+  onExpandFullscreen?: () => void;
 }
 
 export default function RouteMap({
@@ -29,19 +36,23 @@ export default function RouteMap({
   className = 'w-full h-80 sm:h-96',
   interactive = true,
   onMapReady,
+  onWaypointClick,
+  onExpandFullscreen,
 }: RouteMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const onMapReadyRef = useRef(onMapReady);
-  const [styleKey, setStyleKey] = useState<MapStyleKey>('streets');
-
-  useEffect(() => {
-    setStyleKey(getInitialStyle());
-  }, []);
+  const onWaypointClickRef = useRef(onWaypointClick);
+  const [styleKey, setStyleKey] = useState<MapStyleKey>(getInitialStyle);
+  const initialStyleRef = useRef<MapStyleKey>(getInitialStyle());
 
   useEffect(() => {
     onMapReadyRef.current = onMapReady;
   }, [onMapReady]);
+
+  useEffect(() => {
+    onWaypointClickRef.current = onWaypointClick;
+  }, [onWaypointClick]);
 
   const ensureRouteLine = useCallback(
     (map: maplibregl.Map) => {
@@ -64,13 +75,9 @@ export default function RouteMap({
           paint: {
             'line-color': '#1F2A1E',
             'line-width': 4.5,
-            // White halo keeps the ink line readable on satellite imagery
             'line-width-transition': { duration: 0 },
           },
         });
-        // Add a subtle halo underneath for satellite contrast (if not already present)
-        // We achieve this by painting a wider, semi-transparent white line behind the ink line
-        // via a dedicated layer inserted just below the main line.
         if (!map.getLayer('route-line-halo')) {
           try {
             map.addLayer(
@@ -91,14 +98,6 @@ export default function RouteMap({
     },
     [coordinates]
   );
-
-  // Keep initial style in a ref so the map is not torn down on toggle — switching uses setStyle
-  const initialStyleRef = useRef<MapStyleKey>(styleKey);
-  // Sync initial ref before first mount if localStorage read races the effect above
-  if (typeof window !== 'undefined') {
-    const saved = window.localStorage.getItem(STYLE_STORAGE_KEY) as MapStyleKey | null;
-    if (saved === 'satellite' || saved === 'streets') initialStyleRef.current = saved;
-  }
 
   useEffect(() => {
     if (!mapContainer.current || coordinates.length === 0) return;
@@ -183,13 +182,39 @@ export default function RouteMap({
 
       ensureRouteLine(map);
 
-      // Per-kilometer distance markers (DOM markers, survive style switches — create only once)
+      // Per-kilometer distance markers (with click-to-zoom and hover un-nesting for dense clusters)
       getKilometerMarks(coordinates).forEach(({ km, position }) => {
         const kmEl = document.createElement('div');
         kmEl.className = 'route-marker km-marker';
+        kmEl.style.cursor = 'pointer';
+        kmEl.style.transition = 'transform 0.15s ease, z-index 0.15s ease';
         kmEl.innerHTML = `
-          <div style="background-color: #F7F5EF; color: #1F2A1E; min-width: 26px; height: 20px; padding: 0 3px; border-radius: 13px; display: flex; align-items: center; justify-content: center; font-family: monospace; font-size: 10px; font-weight: bold; border: 2px solid #1F2A1E; box-shadow: 0 1px 3px rgba(0,0,0,0.25); z-index: 5;" title="${km} km">${km}</div>
+          <div style="background-color: #F7F5EF; color: #1F2A1E; min-width: 26px; height: 20px; padding: 0 4px; border-radius: 13px; display: flex; align-items: center; justify-content: center; font-family: monospace; font-size: 10px; font-weight: bold; border: 2px solid #1F2A1E; box-shadow: 0 1px 3px rgba(0,0,0,0.25); select-none;" title="Km ${km} — Click to inspect">${km}</div>
         `;
+
+        // Click to pan/zoom to waypoint
+        kmEl.addEventListener('click', (e) => {
+          e.stopPropagation();
+          map.flyTo({
+            center: position,
+            zoom: Math.max(map.getZoom(), 15),
+            duration: 600,
+          });
+          if (onWaypointClickRef.current) {
+            onWaypointClickRef.current(km);
+          }
+        });
+
+        // Hover elevates above dense overlapping neighbors
+        kmEl.addEventListener('mouseenter', () => {
+          kmEl.style.zIndex = '40';
+          kmEl.style.transform = 'scale(1.2)';
+        });
+        kmEl.addEventListener('mouseleave', () => {
+          kmEl.style.zIndex = '5';
+          kmEl.style.transform = 'scale(1)';
+        });
+
         new maplibregl.Marker({ element: kmEl, anchor: 'center' })
           .setLngLat(position)
           .addTo(map);
@@ -202,17 +227,12 @@ export default function RouteMap({
       map.resize();
     };
 
-    // Draw as soon as the style (not the tile data) is ready. Waiting for the
-    // full 'load' event stalls indefinitely when tile requests fail or hang,
-    // which previously left the route line and markers undrawn.
     if (map.isStyleLoaded()) {
       setupLayers();
     } else {
       map.once('style.load', setupLayers);
     }
 
-    // Re-add the ink route line (with halo) after every style switch — setStyle clears custom sources/layers,
-    // while DOM markers (S/F/km) persist. This keeps the line visible on both streets and satellite.
     const handleStyleLoad = () => {
       ensureRouteLine(map);
       map.fitBounds(bounds, {
@@ -239,7 +259,7 @@ export default function RouteMap({
     };
   }, [coordinates, interactive, ensureRouteLine]);
 
-  // Handle style switching without remounting — re-adds ink line on style.load above
+  // Handle style switching without remounting
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -265,32 +285,49 @@ export default function RouteMap({
         className="w-full h-full"
         data-testid="maplibre-container"
       />
-      {/* Style switcher — paper flat, hairline borders, single accent per style-guide */}
-      <div className="absolute top-2 left-2 z-10 inline-flex rounded-[4px] border border-contour-tan bg-chalk p-0.5 shadow-sm">
-        <button
-          type="button"
-          onClick={switchStreets}
-          aria-pressed={styleKey === 'streets'}
-          className={`min-h-9 px-3 py-2 rounded-[3px] text-xs font-data uppercase tracking-wider transition-colors ${
-            styleKey === 'streets'
-              ? 'bg-ink text-chalk font-bold'
-              : 'text-ink/70 hover:text-ink hover:bg-paper/60'
-          }`}
-        >
-          Streets
-        </button>
-        <button
-          type="button"
-          onClick={switchSatellite}
-          aria-pressed={styleKey === 'satellite'}
-          className={`min-h-9 px-3 py-2 rounded-[3px] text-xs font-data uppercase tracking-wider transition-colors ${
-            styleKey === 'satellite'
-              ? 'bg-ink text-chalk font-bold'
-              : 'text-ink/70 hover:text-ink hover:bg-paper/60'
-          }`}
-        >
-          Satellite
-        </button>
+
+      {/* Style switcher & Fullscreen Expand button */}
+      <div className="absolute top-2 left-2 z-10 inline-flex items-center gap-2">
+        <div className="inline-flex rounded-[4px] border border-contour-tan bg-chalk p-0.5 shadow-sm">
+          <button
+            type="button"
+            onClick={switchStreets}
+            aria-pressed={styleKey === 'streets'}
+            className={`min-h-8 px-2.5 py-1 rounded-[3px] text-xs font-data uppercase tracking-wider transition-colors cursor-pointer ${
+              styleKey === 'streets'
+                ? 'bg-ink text-chalk font-bold'
+                : 'text-ink/70 hover:text-ink hover:bg-paper/60'
+            }`}
+          >
+            Streets
+          </button>
+          <button
+            type="button"
+            onClick={switchSatellite}
+            aria-pressed={styleKey === 'satellite'}
+            className={`min-h-8 px-2.5 py-1 rounded-[3px] text-xs font-data uppercase tracking-wider transition-colors cursor-pointer ${
+              styleKey === 'satellite'
+                ? 'bg-ink text-chalk font-bold'
+                : 'text-ink/70 hover:text-ink hover:bg-paper/60'
+            }`}
+          >
+            Satellite
+          </button>
+        </div>
+
+        {onExpandFullscreen && (
+          <button
+            type="button"
+            id="btn-expand-map-fullscreen"
+            data-testid="btn-expand-map-fullscreen"
+            onClick={onExpandFullscreen}
+            className="min-h-8 px-2.5 py-1 rounded-[4px] border border-contour-tan bg-chalk text-ink text-xs font-data hover:border-ink transition-colors shadow-sm inline-flex items-center gap-1.5 cursor-pointer select-none"
+            title="Expand map to fullscreen"
+          >
+            <Maximize2 size={13} strokeWidth={2} aria-hidden="true" />
+            <span className="hidden sm:inline">Expand</span>
+          </button>
+        )}
       </div>
     </div>
   );

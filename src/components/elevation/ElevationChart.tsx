@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { Mountain } from 'lucide-react';
 
@@ -8,6 +8,9 @@ interface ElevationChartProps {
   gpxRaw?: string;
   elevationPoints?: number[];
   distanceMeters?: number;
+  progress?: number; // 0 to 1
+  onScrub?: (progress: number) => void;
+  activeWaypointKm?: number | null;
   className?: string;
 }
 
@@ -15,9 +18,13 @@ export function ElevationChart({
   gpxRaw,
   elevationPoints,
   distanceMeters = 5000,
+  progress,
+  onScrub,
+  activeWaypointKm,
   className = '',
 }: ElevationChartProps) {
   const t = useTranslations('routeDetail');
+  const svgRef = useRef<SVGSVGElement | null>(null);
 
   const points = useMemo(() => {
     if (elevationPoints && elevationPoints.length > 0) {
@@ -72,24 +79,81 @@ export function ElevationChart({
 
   const areaPath = `${linePath} L ${width},${height - paddingBottom} L 0,${height - paddingBottom} Z`;
 
+  // Dynamic calculations for GhostRunner progress
+  const hasProgress = typeof progress === 'number' && !isNaN(progress);
+  const clampedProgress = hasProgress ? Math.max(0, Math.min(1, progress)) : 0;
+  const currentIdx = Math.min(
+    points.length - 1,
+    Math.round(clampedProgress * (points.length - 1))
+  );
+  const currentEle = points[currentIdx];
+  const currentKm = ((clampedProgress * distanceMeters) / 1000).toFixed(1);
+  const needleX = clampedProgress * width;
+  const needleY =
+    height - paddingBottom - ((currentEle - minEle) / eleSpan) * usableHeight;
+
+  // Active waypoint needle X position
+  const waypointNeedleX =
+    activeWaypointKm !== undefined && activeWaypointKm !== null
+      ? ((activeWaypointKm * 1000) / distanceMeters) * width
+      : null;
+
+  // Pointer scrubbing handler
+  const handlePointerAction = (e: React.PointerEvent<SVGSVGElement>) => {
+    if (!onScrub) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const clickX = e.clientX - rect.left;
+    const tVal = Math.max(0, Math.min(1, clickX / rect.width));
+    onScrub(tVal);
+  };
+
   return (
     <div className={`space-y-2 ${className}`}>
-      <div className="flex items-center justify-between font-data text-xs text-ink">
-        <span className="font-bold uppercase tracking-wider">
-          {t('elevationProfile')}
-        </span>
-        <span aria-label={`Elevation ${Math.round(minEle)} to ${Math.round(maxEle)} meters, gain ${Math.round(eleSpan)}`}>
+      <div className="flex flex-wrap items-center justify-between gap-2 font-data text-xs text-ink">
+        <div className="flex items-center gap-2">
+          <span className="font-bold uppercase tracking-wider">
+            {t('elevationProfile')}
+          </span>
+          {/* Live telemetry readout */}
+          {hasProgress && clampedProgress > 0 && (
+            <span
+              id="elevation-live-readout"
+              data-testid="elevation-live-readout"
+              className="px-2 py-0.5 rounded-[3px] bg-trail-orange text-chalk text-[11px] font-bold uppercase tracking-wider shadow-xs"
+            >
+              Km {currentKm} · {Math.round(currentEle)}m
+            </span>
+          )}
+        </div>
+
+        <span
+          className="text-ink/70"
+          aria-label={`Elevation ${Math.round(minEle)} to ${Math.round(maxEle)} meters, gain ${Math.round(eleSpan)}`}
+        >
           {Math.round(minEle)}m — {Math.round(maxEle)}m ({Math.round(eleSpan)}m Δ)
         </span>
       </div>
 
-      <div className="bg-paper/40 p-3 rounded-[8px] border border-contour-tan">
+      <div
+        className={`bg-paper/40 p-3 rounded-[8px] border border-contour-tan select-none ${
+          onScrub ? 'cursor-ew-resize' : ''
+        }`}
+      >
         <svg
+          ref={svgRef}
           viewBox={`0 0 ${width} ${height}`}
-          className="w-full h-24 overflow-visible"
+          className="w-full h-24 overflow-visible touch-none"
           role="img"
           aria-label={`Elevation profile from ${Math.round(minEle)} to ${Math.round(maxEle)} meters over ${(distanceMeters / 1000).toFixed(1)} km`}
           tabIndex={0}
+          onPointerDown={(e) => {
+            handlePointerAction(e);
+            (e.target as Element).setPointerCapture(e.pointerId);
+          }}
+          onPointerMove={(e) => {
+            if (e.buttons === 1) handlePointerAction(e);
+          }}
         >
           {/* Grid lines */}
           <line
@@ -140,37 +204,66 @@ export function ElevationChart({
               />
             </>
           )}
+
+          {/* Active Waypoint Highlight Needle */}
+          {waypointNeedleX !== null && (
+            <>
+              <line
+                x1={waypointNeedleX}
+                y1={paddingTop}
+                x2={waypointNeedleX}
+                y2={height - paddingBottom}
+                stroke="#1F2A1E"
+                strokeWidth="1.5"
+                strokeDasharray="3 3"
+              />
+              <text
+                x={waypointNeedleX}
+                y={paddingTop - 3}
+                textAnchor="middle"
+                className="font-data text-[9px] fill-ink font-bold"
+              >
+                {activeWaypointKm}k
+              </text>
+            </>
+          )}
+
+          {/* GhostRunner Synchronized Needle & Moving Dot */}
+          {hasProgress && (
+            <g id="elevation-scrub-indicator">
+              <line
+                x1={needleX}
+                y1={paddingTop}
+                x2={needleX}
+                y2={height - paddingBottom}
+                stroke="#E8562C"
+                strokeWidth="1.5"
+                strokeDasharray="2 2"
+              />
+              <circle
+                cx={needleX}
+                cy={needleY}
+                r="5"
+                fill="#E8562C"
+                stroke="#F7F5EF"
+                strokeWidth="2"
+                className="transition-transform duration-75"
+              />
+            </g>
+          )}
         </svg>
 
-        {/* Distance labels */}
-        <div className="flex justify-between text-xs font-data text-ink/70 pt-1 border-t border-contour-tan/40">
+        {/* Distance labels with scrubbing hint */}
+        <div className="flex justify-between items-center text-xs font-data text-ink/70 pt-1 border-t border-contour-tan/40">
           <span>0.0 km</span>
+          {onScrub && (
+            <span className="text-[10px] text-ink/50 uppercase tracking-wider">
+              Scrub chart to seek
+            </span>
+          )}
           <span>{(distanceMeters / 1000).toFixed(1)} km</span>
         </div>
       </div>
-
-      <details className="border border-contour-tan rounded-[4px] bg-chalk px-3 py-2">
-        <summary className="cursor-pointer font-data text-xs text-ink/80 hover:text-ink select-none">View elevation data table</summary>
-        <div className="mt-2 max-h-40 overflow-auto">
-          <table className="w-full text-xs font-data">
-            <thead>
-              <tr className="border-b border-contour-tan text-ink/70">
-                <th className="text-left py-1 px-2 font-semibold">Point</th>
-                <th className="text-right py-1 px-2 font-semibold">Elevation (m)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {points.slice(0, 100).map((ele, i) => (
-                <tr key={i} className="border-b border-contour-tan/30 text-ink">
-                  <td className="py-1 px-2">{i + 1}</td>
-                  <td className="py-1 px-2 text-right">{Math.round(ele)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {points.length > 100 && <p className="text-[11px] text-ink/60 mt-1">Showing 100 of {points.length} points.</p>}
-        </div>
-      </details>
     </div>
   );
 }

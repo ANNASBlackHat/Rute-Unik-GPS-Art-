@@ -17,7 +17,7 @@ export default async function middleware(request: NextRequest) {
 
   // Bypass i18n for auth callback (must stay at /auth/callback, not /id/auth/callback)
   if (pathname.startsWith('/auth/') || pathname === '/auth') {
-    let response = NextResponse.next();
+    const response = NextResponse.next();
     const { response: supabaseResponse } = await updateSession(request, response);
     return supabaseResponse;
   }

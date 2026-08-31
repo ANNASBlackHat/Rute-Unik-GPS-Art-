@@ -3,10 +3,8 @@ import { getMessages, setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { routing } from '@/i18n/routing';
 import { fontDisplay, fontData, fontBody } from '@/lib/fonts';
-import { LanguageSwitcher } from '@/components/LanguageSwitcher';
-import { NavbarUser } from '@/components/auth/NavbarUser';
+import { Navbar } from '@/components/layout/Navbar';
 import { RouteFocus } from '@/components/RouteFocus';
-import { Link } from '@/i18n/routing';
 import '../globals.css';
 
 export function generateStaticParams() {
@@ -38,36 +36,7 @@ export default async function LocaleLayout({
           Skip to main content
         </a>
         <NextIntlClientProvider messages={messages}>
-          <header className="border-b border-contour-tan bg-paper sticky top-0 z-40">
-            <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
-              <Link
-                href="/"
-                className="flex items-center gap-2 group text-decoration-none"
-              >
-                <span className="font-display text-xl tracking-tight text-ink uppercase group-hover:text-trail-orange transition-colors">
-                  RUTE UNIK
-                </span>
-                <span className="text-[10px] font-data px-1.5 py-0.5 rounded-[3px] border border-contour-tan uppercase text-ink/70">
-                  GPS ART
-                </span>
-              </Link>
-
-              <div className="flex items-center gap-4">
-                <nav className="flex items-center gap-3 sm:gap-4 text-xs font-display uppercase tracking-wider text-ink/80" aria-label="Main navigation">
-                  <Link
-                    href="/"
-                    className="inline-flex items-center min-h-11 px-1.5 py-2 hover:text-ink transition-colors"
-                  >
-                    {locale === 'id' ? 'Jelajah' : 'Explore'}
-                  </Link>
-                  <span className="text-contour-tan" aria-hidden="true">/</span>
-                  <NavbarUser locale={locale} />
-                </nav>
-
-                <LanguageSwitcher />
-              </div>
-            </div>
-          </header>
+          <Navbar locale={locale} />
 
           <main id="main-content" tabIndex={-1} className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-6 py-8 focus:outline-none">
             <RouteFocus />

@@ -1,9 +1,17 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { RouteItem, RouteCard } from './RouteCard';
 import { CityFilter, CityOption } from './CityFilter';
+import { DistanceFilter } from './DistanceFilter';
+import { ShapeFilter } from './ShapeFilter';
+import { RouteSearchBar } from './RouteSearchBar';
+import { RouteSortSelect } from './RouteSortSelect';
+import { SurpriseMeButton } from './SurpriseMeButton';
+import { useRouteFilters } from '@/hooks/useRouteFilters';
 import { useTranslations } from 'next-intl';
+import { X } from 'lucide-react';
+import { ShapeCategory } from '@/lib/shape-category';
 
 interface RouteGridProps {
   initialRoutes: RouteItem[];
@@ -12,50 +20,252 @@ interface RouteGridProps {
 
 export function RouteGrid({ initialRoutes, cities }: RouteGridProps) {
   const t = useTranslations('home');
-  const [selectedCityId, setSelectedCityId] = useState<string | null>(null);
+  const { filters, updateFilters, clearAllFilters, hasActiveFilters } =
+    useRouteFilters();
 
-  // Compute route count per city
+  // Active cities with counts (> 0 only)
   const citiesWithCounts = useMemo(() => {
     const countMap = new Map<string, number>();
     for (const r of initialRoutes) {
       countMap.set(r.city_id, (countMap.get(r.city_id) || 0) + 1);
     }
-    return cities.map((c) => ({
-      ...c,
-      count: countMap.get(c.id) || 0,
-    }));
+    return cities
+      .map((c) => ({
+        ...c,
+        count: countMap.get(c.id) || 0,
+      }))
+      .filter((c) => (c.count || 0) > 0);
   }, [cities, initialRoutes]);
 
+  // Shape category counts across catalog
+  const categoryCounts = useMemo(() => {
+    const counts: Record<ShapeCategory, number> = {
+      animal: 0,
+      object: 0,
+      symbol: 0,
+      letter_number: 0,
+      abstract: 0,
+    };
+    for (const r of initialRoutes) {
+      if (r.shape_category && counts[r.shape_category] !== undefined) {
+        counts[r.shape_category]++;
+      }
+    }
+    return counts;
+  }, [initialRoutes]);
+
+  // Resolve selectedCityId from URL param (supports both UUID and lowercase city name)
+  const selectedCityId = useMemo(() => {
+    if (!filters.city) return null;
+    const matchById = citiesWithCounts.find((c) => c.id === filters.city);
+    if (matchById) return matchById.id;
+    const matchByName = citiesWithCounts.find(
+      (c) => c.name.toLowerCase() === filters.city?.toLowerCase()
+    );
+    return matchByName ? matchByName.id : filters.city;
+  }, [filters.city, citiesWithCounts]);
+
+  const handleSelectCity = (cityId: string | null) => {
+    if (!cityId) {
+      updateFilters({ city: null });
+      return;
+    }
+    // Encode city name in URL for readability (e.g. ?city=solo)
+    const city = citiesWithCounts.find((c) => c.id === cityId);
+    updateFilters({ city: city ? city.name.toLowerCase() : cityId });
+  };
+
+  // Filtered & Sorted Routes
   const filteredRoutes = useMemo(() => {
-    if (!selectedCityId) return initialRoutes;
-    return initialRoutes.filter((r) => r.city_id === selectedCityId);
-  }, [initialRoutes, selectedCityId]);
+    let result = initialRoutes;
+
+    // 1. City Filter
+    if (selectedCityId) {
+      result = result.filter(
+        (r) =>
+          r.city_id === selectedCityId ||
+          r.city_name?.toLowerCase() === filters.city?.toLowerCase()
+      );
+    }
+
+    // 2. Distance Filter
+    if (filters.distance) {
+      switch (filters.distance) {
+        case '<5':
+          result = result.filter((r) => r.distance_m < 5000);
+          break;
+        case '5-10':
+          result = result.filter(
+            (r) => r.distance_m >= 5000 && r.distance_m <= 10000
+          );
+          break;
+        case '10-15':
+          result = result.filter(
+            (r) => r.distance_m >= 10000 && r.distance_m <= 15000
+          );
+          break;
+        case '15+':
+          result = result.filter((r) => r.distance_m >= 15000);
+          break;
+      }
+    }
+
+    // 3. Shape Filter
+    if (filters.shape) {
+      result = result.filter((r) => r.shape_category === filters.shape);
+    }
+
+    // 4. Search Filter (by title or city)
+    if (filters.q.trim()) {
+      const q = filters.q.toLowerCase().trim();
+      result = result.filter(
+        (r) =>
+          r.name.toLowerCase().includes(q) ||
+          r.city_name?.toLowerCase().includes(q)
+      );
+    }
+
+    // 5. Sorting
+    const sorted = [...result];
+    switch (filters.sort) {
+      case 'shortest':
+        sorted.sort((a, b) => a.distance_m - b.distance_m);
+        break;
+      case 'longest':
+        sorted.sort((a, b) => b.distance_m - a.distance_m);
+        break;
+      case 'popular':
+        sorted.sort(
+          (a, b) => (b.download_count || 0) - (a.download_count || 0)
+        );
+        break;
+      case 'newest':
+      default: {
+        const statusOrder: Record<string, number> = {
+          official: 0,
+          community: 1,
+          pending: 2,
+        };
+        sorted.sort((a, b) => {
+          const ao = statusOrder[a.status] ?? 2;
+          const bo = statusOrder[b.status] ?? 2;
+          if (ao !== bo) return ao - bo;
+          return (
+            new Date(b.created_at || 0).getTime() -
+            new Date(a.created_at || 0).getTime()
+          );
+        });
+        break;
+      }
+    }
+
+    return sorted;
+  }, [initialRoutes, selectedCityId, filters]);
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-contour-tan pb-4">
-        <div className="min-w-0 flex-1">
+      {/* Search Bar & Primary Actions Row */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div className="flex-1 max-w-md">
+          <RouteSearchBar
+            value={filters.q}
+            onChange={(q) => updateFilters({ q })}
+          />
+        </div>
+
+        <div className="flex items-center gap-2 justify-between sm:justify-end">
+          <RouteSortSelect
+            value={filters.sort}
+            onChange={(sort) => updateFilters({ sort })}
+          />
+          <SurpriseMeButton
+            candidates={filteredRoutes}
+            allRoutes={initialRoutes}
+          />
+        </div>
+      </div>
+
+      {/* Filter Control Section */}
+      <div className="p-4 bg-paper/60 border border-contour-tan rounded-[8px] space-y-4 shadow-sm">
+        {/* City Chips Row */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-data uppercase tracking-wider text-ink/70 font-semibold">
+              {t('selectCity')}
+            </span>
+          </div>
           <CityFilter
             cities={citiesWithCounts}
             selectedCityId={selectedCityId}
-            onSelectCity={setSelectedCityId}
+            onSelectCity={handleSelectCity}
             totalCount={initialRoutes.length}
           />
         </div>
 
-        <span className="font-data text-xs text-ink/70 shrink-0">
-          {filteredRoutes.length} {t('routesCount')}
-        </span>
+        {/* Shape / Theme Chips Row (Equal visual weight to city chips) */}
+        <div className="space-y-1.5 pt-2 border-t border-contour-tan/50">
+          <span className="text-[11px] font-data uppercase tracking-wider text-ink/70 font-semibold">
+            {t('shapeLabel')}
+          </span>
+          <ShapeFilter
+            selectedShape={filters.shape}
+            onSelectShape={(shape) => updateFilters({ shape })}
+            categoryCounts={categoryCounts}
+          />
+        </div>
+
+        {/* Distance Buckets Row */}
+        <div className="space-y-1.5 pt-2 border-t border-contour-tan/50">
+          <span className="text-[11px] font-data uppercase tracking-wider text-ink/70 font-semibold">
+            {t('distanceLabel')}
+          </span>
+          <DistanceFilter
+            selectedBucket={filters.distance}
+            onSelectBucket={(distance) => updateFilters({ distance })}
+          />
+        </div>
       </div>
 
+      {/* Results Header & Active Filter Clearer */}
+      <div className="flex items-center justify-between gap-4 border-b border-contour-tan pb-3 text-xs font-data text-ink/70">
+        <div className="flex items-center gap-2">
+          <span className="font-bold text-ink text-sm">
+            {filteredRoutes.length} {t('routesCount')}
+          </span>
+          {hasActiveFilters && (
+            <button
+              type="button"
+              id="btn-clear-filters"
+              onClick={clearAllFilters}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] bg-chalk border border-contour-tan text-ink/80 hover:text-ink hover:border-ink cursor-pointer transition-colors"
+            >
+              <X size={12} strokeWidth={2} aria-hidden="true" />
+              <span>{t('clearFilters')}</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Routes Grid Display */}
       {filteredRoutes.length === 0 ? (
-        <div className="paper-card p-12 text-center space-y-2">
+        <div className="paper-card p-12 text-center space-y-3 bg-chalk rounded-[8px] border border-contour-tan">
           <p className="font-display text-base text-ink uppercase">
             {t('noRoutesFound')}
           </p>
           <p className="font-body text-xs text-ink/60">
             {t('noRoutesSubtitle')}
           </p>
+          {hasActiveFilters && (
+            <div className="pt-2">
+              <button
+                type="button"
+                onClick={clearAllFilters}
+                className="px-4 py-2 bg-ink text-chalk rounded-[4px] font-display text-xs uppercase tracking-wider hover:bg-ink/80 transition-colors cursor-pointer"
+              >
+                {t('clearFilters')}
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         <div

@@ -220,3 +220,46 @@ export function interpolatePolyline(
 
   return routeCoords[routeCoords.length - 1];
 }
+
+/**
+ * Extracts a compact array of sampled elevation numbers from raw GPX XML.
+ */
+export function extractElevationSamples(
+  gpxRaw?: string | null,
+  numSamples = 20
+): number[] {
+  if (!gpxRaw) return [];
+  const matches = Array.from(gpxRaw.matchAll(/<ele>([\d.-]+)<\/ele>/g));
+  if (matches.length === 0) return [];
+  const all = matches.map((m) => parseFloat(m[1])).filter((n) => !isNaN(n));
+  if (all.length <= numSamples) return all;
+  const step = (all.length - 1) / (numSamples - 1);
+  return Array.from({ length: numSamples }, (_, i) => all[Math.round(i * step)]);
+}
+
+/**
+ * Robustly parses [longitude, latitude] coordinates from any GPX XML string.
+ * Handles both lat/lon attribute ordering, rtept/trkpt/wpt tags, and multiline spacing.
+ */
+export function parseGpxCoordinates(gpxRaw: string): [number, number][] {
+  if (!gpxRaw) return [];
+  const coords: [number, number][] = [];
+
+  const pointRegex = /<(?:trkpt|rtept|wpt)\b([^>]*)\/?>/gi;
+  let match: RegExpExecArray | null;
+
+  while ((match = pointRegex.exec(gpxRaw)) !== null) {
+    const attrs = match[1];
+    const latMatch = attrs.match(/lat="([^"]+)"/i);
+    const lonMatch = attrs.match(/lon="([^"]+)"/i);
+    if (latMatch && lonMatch) {
+      const lat = parseFloat(latMatch[1]);
+      const lon = parseFloat(lonMatch[1]);
+      if (!isNaN(lat) && !isNaN(lon)) {
+        coords.push([lon, lat]);
+      }
+    }
+  }
+
+  return coords;
+}

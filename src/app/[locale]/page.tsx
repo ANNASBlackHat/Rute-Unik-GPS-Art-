@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { RouteItem } from '@/components/directory/RouteCard';
 import { CityOption } from '@/components/directory/CityFilter';
+import { inferShapeCategory, type ShapeCategory } from '@/lib/shape-category';
+import { extractElevationSamples } from '@/lib/geo';
 
 export default async function HomePage({
   params,
@@ -35,6 +37,7 @@ export default async function HomePage({
         elevation_gain_m,
         status,
         thumbnail_svg,
+        gpx_raw,
         created_at,
         cities (
           name
@@ -49,16 +52,36 @@ export default async function HomePage({
     name: c.name,
   }));
 
-  const rawRoutes: RouteItem[] = (routesRes.data || []).map((r) => ({
+  interface RawRouteRow {
+    id: string;
+    name: string;
+    city_id: string;
+    distance_m: number;
+    elevation_gain_m: number | null;
+    status: RouteItem['status'];
+    thumbnail_svg: string;
+    gpx_raw?: string | null;
+    download_count?: number | null;
+    shape_category?: ShapeCategory | null;
+    created_at: string;
+    cities: { name?: string } | null;
+  }
+
+  const rawRoutes: RouteItem[] = (
+    (routesRes.data as unknown as RawRouteRow[]) || []
+  ).map((r) => ({
     id: r.id,
     name: r.name,
     city_id: r.city_id,
-    city_name:
-      (r.cities as unknown as { name?: string } | null)?.name || 'Unknown',
+    city_name: r.cities?.name || 'Unknown',
     distance_m: Number(r.distance_m),
     elevation_gain_m: r.elevation_gain_m ? Number(r.elevation_gain_m) : null,
-    status: r.status as RouteItem['status'],
+    status: r.status,
     thumbnail_svg: r.thumbnail_svg,
+    shape_category: r.shape_category || inferShapeCategory(r.name),
+    elevation_points: extractElevationSamples(r.gpx_raw, 20),
+    download_count: Number(r.download_count || 0),
+    created_at: r.created_at,
   }));
 
   // Sort: official/community first (by newest), pending at bottom (unverified)
@@ -89,7 +112,9 @@ export default async function HomePage({
 
       {/* Directory & Catalog Grid */}
       <section className="space-y-4">
-        <RouteGrid initialRoutes={routes} cities={cities} />
+        <React.Suspense fallback={<div className="p-12 text-center text-xs font-data text-ink/50 uppercase tracking-wider">Loading Directory...</div>}>
+          <RouteGrid initialRoutes={routes} cities={cities} />
+        </React.Suspense>
       </section>
 
       {/* Design System Tokens — dev only (hidden in production) */}

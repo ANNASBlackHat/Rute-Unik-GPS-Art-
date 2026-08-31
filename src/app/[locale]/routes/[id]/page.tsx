@@ -2,16 +2,12 @@ import React from 'react';
 import { notFound } from 'next/navigation';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { supabase } from '@/lib/supabase';
-import { DetailMapSection } from '@/components/map/DetailMapSection';
-import { ElevationChart } from '@/components/elevation/ElevationChart';
+import { RouteViewerSection } from '@/components/map/RouteViewerSection';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
 import { Link } from '@/i18n/routing';
-import { VideoExportButton } from '@/components/video/VideoExportButton';
-import { ShareButton, ViewTracker } from '@/components/routes/ShareButton';
-import { DownloadImageButton } from '@/components/routes/DownloadImageButton';
-import { StartRunButton } from '@/components/routes/StartRunButton';
-import { Download, PersonStanding } from 'lucide-react';
+import { RouteActionsMenu } from '@/components/routes/RouteActionsMenu';
+import { ViewTracker } from '@/components/routes/ShareButton';
 
 export default async function RouteDetailPage({
   params,
@@ -168,23 +164,30 @@ export default async function RouteDetailPage({
 
       {/* Main Content Grid: Map + Stats */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        {/* Left 2 Cols: Interactive Route Map & Elevation Profile */}
+        {/* Left 2 Cols: Interactive Route Map & Elevation Profile with Synchronized Playback */}
         <div className="lg:col-span-2 space-y-6">
-          <Card className="p-3 sm:p-4">
-            <DetailMapSection coordinates={coordinates} />
-          </Card>
-
-          {/* Elevation Profile Chart */}
-          <Card className="p-4 sm:p-6">
-            <ElevationChart
-              gpxRaw={route.gpx_raw}
-              distanceMeters={route.distance_m}
-            />
-          </Card>
+          <RouteViewerSection
+            coordinates={coordinates}
+            gpxRaw={route.gpx_raw}
+            distanceMeters={route.distance_m}
+          />
         </div>
 
-        {/* Right 1 Col: Comprehensive Stats & Action Buttons */}
+        {/* Right 1 Col: GPX Artwork Preview Box & Comprehensive Stats */}
         <div className="space-y-6">
+          {/* GPX Artwork Preview Box (Prominent preview above stats) */}
+          <Card className="space-y-3">
+            <h3 className="font-display text-xs uppercase tracking-wider text-ink/70">
+              {t('shapePreview')}
+            </h3>
+            <div className="w-full aspect-square bg-paper/60 rounded-[8px] p-6 border border-contour-tan/50 flex items-center justify-center">
+              <div
+                className="w-full h-full flex items-center justify-center [&>svg]:w-full [&>svg]:h-full [&>svg]:max-h-full [&>svg]:stroke-ink"
+                dangerouslySetInnerHTML={{ __html: route.thumbnail_svg }}
+              />
+            </div>
+          </Card>
+
           <Card className="space-y-6">
             <h2 className="font-display text-sm uppercase tracking-wider text-ink border-b border-contour-tan pb-2">
               {t('routeStats')}
@@ -230,51 +233,16 @@ export default async function RouteDetailPage({
               </div>
             </div>
 
-            {/* Actions */}
-            <div className="pt-2 space-y-3">
-              <a
-                href={`/api/routes/${route.id}/gpx`}
-                download
-                className="w-full inline-flex items-center justify-center gap-2 font-display tracking-wider uppercase text-xs px-4 py-2.5 rounded-[4px] border border-contour-tan text-ink hover:border-ink hover:bg-paper/40 transition-colors select-none"
-              >
-                <Download size={16} strokeWidth={1.5} aria-hidden="true" /> {t('downloadGpx')}
-              </a>
-
-              <StartRunButton routeId={route.id} />
-
-              <ShareButton routeId={route.id} routeName={route.name} cityName={cityName} />
-
-              <DownloadImageButton
-                routeName={route.name}
-                cityName={cityName}
-                distanceKm={distanceKm}
-                elevationGain={elevation}
-                thumbnailSvg={route.thumbnail_svg}
-                coordinates={coordinates}
-              />
-
-              <VideoExportButton
-                routeId={route.id}
-                routeName={route.name}
-                cityName={cityName}
-                distanceKm={distanceKm}
-                elevationGain={elevation}
-                coordinates={coordinates}
-              />
-            </div>
-          </Card>
-
-          {/* GPX Artwork Preview Box */}
-          <Card className="space-y-3">
-            <h3 className="font-display text-xs uppercase tracking-wider text-ink/70">
-              {t('shapePreview')}
-            </h3>
-            <div className="w-full aspect-square bg-paper/60 rounded-[8px] p-6 border border-contour-tan/50 flex items-center justify-center">
-              <div
-                className="w-full h-full flex items-center justify-center [&>svg]:w-full [&>svg]:h-full [&>svg]:max-h-full [&>svg]:stroke-ink"
-                dangerouslySetInnerHTML={{ __html: route.thumbnail_svg }}
-              />
-            </div>
+            {/* Actions Menu */}
+            <RouteActionsMenu
+              routeId={route.id}
+              routeName={route.name}
+              cityName={cityName}
+              distanceKm={distanceKm}
+              elevationGain={elevation}
+              thumbnailSvg={route.thumbnail_svg}
+              coordinates={coordinates}
+            />
           </Card>
         </div>
       </div>

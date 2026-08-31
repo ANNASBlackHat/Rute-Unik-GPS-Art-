@@ -4,6 +4,8 @@ import { setRequestLocale } from 'next-intl/server';
 import { supabase } from '@/lib/supabase';
 import { RunTracker } from '@/components/run/RunTracker';
 
+import { parseGpxCoordinates } from '@/lib/geo';
+
 export default async function RunModePage({
   params,
 }: {
@@ -24,14 +26,7 @@ export default async function RunModePage({
   }
 
   // Extract coordinates [lon, lat] from GPX
-  const matches = Array.from(
-    route.gpx_raw.matchAll(/<trkpt\s+lat="([^"]+)"\s+lon="([^"]+)"/g)
-  ) as RegExpExecArray[];
-
-  const coordinates: [number, number][] = matches.map((m) => [
-    parseFloat(m[2]),
-    parseFloat(m[1]),
-  ]);
+  const coordinates: [number, number][] = parseGpxCoordinates(route.gpx_raw);
 
   return (
     <div className="space-y-4">

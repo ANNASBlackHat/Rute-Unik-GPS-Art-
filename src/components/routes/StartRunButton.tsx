@@ -14,7 +14,7 @@ export function StartRunButton({ routeId }: { routeId: string }) {
     <Link
       href={`/routes/${routeId}/run`}
       onClick={handleClick}
-      className="w-full inline-flex items-center justify-center gap-2 font-display tracking-wider uppercase text-xs px-4 py-2.5 rounded-[4px] bg-trail-orange text-chalk hover:bg-[#d44820] transition-colors select-none"
+      className="w-full inline-flex items-center justify-center gap-2 font-display tracking-wider uppercase text-xs px-4 py-2.5 rounded-[4px] bg-ink text-chalk hover:bg-moss transition-colors select-none"
     >
       <PersonStanding size={16} strokeWidth={1.5} aria-hidden="true" /> {t('startRun')}
     </Link>
