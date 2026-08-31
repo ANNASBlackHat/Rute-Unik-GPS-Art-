@@ -2,6 +2,8 @@ import React from 'react';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { supabase } from '@/lib/supabase';
 import { RouteGrid } from '@/components/directory/RouteGrid';
+
+export const revalidate = 60;
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';

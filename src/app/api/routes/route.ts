@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { getAuthUser } from '@/lib/supabase/server';
 import { parseGpx } from '@/lib/gpx';
 import { Client } from 'pg';
@@ -164,6 +165,14 @@ export async function POST(request: NextRequest) {
       ]);
 
       const newRouteId = insertRes.rows[0].id;
+
+      // Revalidate homepage/caches so new route appears in prod without redeploy
+      try {
+        revalidatePath('/', 'layout');
+        revalidatePath('/[locale]', 'page');
+        revalidatePath('/id', 'page');
+        revalidatePath('/en', 'page');
+      } catch {}
 
       // 3. Duplicate check — run in background so upload returns fast (<2s) even for large GPX
       // Fire-and-forget: do not block response. Use new client, simplified geom, statement timeout 15s.
