@@ -23,6 +23,7 @@ export function CityManager({ initialCities }: { initialCities: AdminCityItem[] 
   const [lon, setLon] = useState<string>('112.7521');
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const handleAddCity = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,6 +64,28 @@ export function CityManager({ initialCities }: { initialCities: AdminCityItem[] 
       setFeedback(`${msg}`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteCity = async (city: AdminCityItem) => {
+    if (city.routes_count > 0) {
+      setFeedback(`${city.name} has ${city.routes_count} route(s) — cannot delete.`);
+      return;
+    }
+    if (!confirm(`Delete city "${city.name}"? This cannot be undone.`)) return;
+    setDeletingId(city.id);
+    setFeedback(null);
+    try {
+      const res = await fetch(`/api/admin/cities/${city.id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to delete city');
+      setCities((prev) => prev.filter((c) => c.id !== city.id));
+      setFeedback(`${city.name} deleted.`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to delete city';
+      setFeedback(msg);
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -171,6 +194,7 @@ export function CityManager({ initialCities }: { initialCities: AdminCityItem[] 
                 <th className="py-2.5 px-3">Negara</th>
                 <th className="py-2.5 px-3">Koordinat Pusat</th>
                 <th className="py-2.5 px-3 text-right">Jumlah Rute</th>
+                <th className="py-2.5 px-3 text-right">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-contour-tan/50">
@@ -189,6 +213,18 @@ export function CityManager({ initialCities }: { initialCities: AdminCityItem[] 
                   </td>
                   <td className="py-3 px-3 text-right font-bold text-ink">
                     {city.routes_count}
+                  </td>
+                  <td className="py-3 px-3 text-right">
+                    <Button
+                      id={`btn-delete-city-${city.id}`}
+                      variant="secondary"
+                      disabled={city.routes_count > 0 || deletingId === city.id}
+                      onClick={() => handleDeleteCity(city)}
+                      title={city.routes_count > 0 ? `Cannot delete - ${city.routes_count} route(s)` : 'Delete city'}
+                      className="px-2.5 py-1 text-[11px] disabled:opacity-40"
+                    >
+                      {deletingId === city.id ? '...' : 'Hapus'}
+                    </Button>
                   </td>
                 </tr>
               ))}
