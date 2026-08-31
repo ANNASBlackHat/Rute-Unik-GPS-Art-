@@ -34,39 +34,29 @@ export interface AuthUser {
 }
 
 export async function getAuthUser(): Promise<{ user: AuthUser | null }> {
-  const cookieStore = await cookies();
-  const sessionCookie = cookieStore.get('ruteunik_session');
-
-  if (sessionCookie?.value) {
-    try {
-      const user = JSON.parse(
-        Buffer.from(sessionCookie.value, 'base64').toString('utf8')
-      );
-      if (user && user.id && user.email) {
-        return { user };
-      }
-    } catch {
-      // Ignore parse failure
-    }
-  }
-
-  // Fallback to Supabase client auth
   try {
     const supabase = await createClient();
-    const { data } = await supabase.auth.getUser();
-    if (data?.user) {
-      return {
-        user: {
-          id: data.user.id,
-          email: data.user.email || '',
-          full_name: data.user.user_metadata?.full_name,
-          role: data.user.user_metadata?.role || 'runner',
-        },
-      };
-    }
-  } catch {
-    // Ignore error
-  }
+    const {
+      data: { user: authUser },
+    } = await supabase.auth.getUser();
+    if (!authUser) return { user: null };
 
-  return { user: null };
+    // Fetch profile for authoritative role/full_name (defense against user_metadata tampering)
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('full_name, role')
+      .eq('id', authUser.id)
+      .single();
+
+    return {
+      user: {
+        id: authUser.id,
+        email: authUser.email || '',
+        full_name: profile?.full_name || (authUser.user_metadata?.full_name as string | undefined),
+        role: profile?.role || 'runner',
+      },
+    };
+  } catch {
+    return { user: null };
+  }
 }

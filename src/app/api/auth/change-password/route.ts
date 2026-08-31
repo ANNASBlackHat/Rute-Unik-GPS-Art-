@@ -1,30 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAuthUser } from '@/lib/supabase/server';
-import { Client } from 'pg';
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
 
 export async function POST(request: NextRequest) {
-  const { user } = await getAuthUser();
+  const cookieStore = await cookies();
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options));
+          } catch {}
+        },
+      },
+    }
+  );
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   const { currentPassword, newPassword } = await request.json();
   if (!currentPassword || !newPassword || newPassword.length < 6) {
     return NextResponse.json({ error: 'Current and new password (min 6) required' }, { status: 400 });
   }
-  const c = new Client({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_URL?.includes('supabase.co') ? { rejectUnauthorized: false } : undefined,
+
+  // Re-authenticate to verify current password (uses secure Supabase check, not raw pg crypt)
+  const { error: signInError } = await supabase.auth.signInWithPassword({
+    email: user.email!,
+    password: currentPassword,
   });
-  await c.connect();
-  try {
-    const check = await c.query(
-      `select (encrypted_password = extensions.crypt($2, encrypted_password)) as ok from auth.users where id=$1`,
-      [user.id, currentPassword]
-    );
-    if (!check.rows[0]?.ok) {
-      return NextResponse.json({ error: 'Current password is incorrect' }, { status: 400 });
-    }
-    await c.query(`update auth.users set encrypted_password = extensions.crypt($2, extensions.gen_salt('bf')), updated_at = now() where id=$1`, [user.id, newPassword]);
-    return NextResponse.json({ ok: true });
-  } finally {
-    await c.end().catch(() => {});
+  if (signInError) {
+    return NextResponse.json({ error: 'Current password is incorrect' }, { status: 400 });
   }
+
+  const { error: updateError } = await supabase.auth.updateUser({ password: newPassword });
+  if (updateError) {
+    return NextResponse.json({ error: updateError.message }, { status: 400 });
+  }
+
+  return NextResponse.json({ ok: true });
 }

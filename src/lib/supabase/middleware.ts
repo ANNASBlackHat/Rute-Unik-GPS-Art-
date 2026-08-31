@@ -2,22 +2,8 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function updateSession(request: NextRequest, response: NextResponse) {
-  // 1. Check custom ruteunik_session cookie
-  const sessionCookie = request.cookies.get('ruteunik_session');
-  if (sessionCookie?.value) {
-    try {
-      const user = JSON.parse(
-        Buffer.from(sessionCookie.value, 'base64').toString('utf8')
-      );
-      if (user && user.id) {
-        return { user, response };
-      }
-    } catch {
-      // Ignore parse failure
-    }
-  }
+  let supabaseResponse = response;
 
-  // 2. Fallback to Supabase SSR client
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -27,11 +13,10 @@ export async function updateSession(request: NextRequest, response: NextResponse
           return request.cookies.getAll();
         },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value)
-          );
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          supabaseResponse = NextResponse.next({ request });
           cookiesToSet.forEach(({ name, value, options }) =>
-            response.cookies.set(name, value, options)
+            supabaseResponse.cookies.set(name, value, options)
           );
         },
       },
@@ -39,8 +24,26 @@ export async function updateSession(request: NextRequest, response: NextResponse
   );
 
   const {
-    data: { user },
+    data: { user: authUser },
   } = await supabase.auth.getUser();
 
-  return { user, response };
+  if (!authUser) {
+    return { user: null, response: supabaseResponse };
+  }
+
+  // Resolve role from profiles (authoritative, not JWT user_metadata)
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role, full_name')
+    .eq('id', authUser.id)
+    .single();
+
+  const user = {
+    id: authUser.id,
+    email: authUser.email || '',
+    full_name: profile?.full_name || (authUser.user_metadata?.full_name as string | undefined),
+    role: profile?.role || 'runner',
+  };
+
+  return { user, response: supabaseResponse };
 }

@@ -7,7 +7,7 @@ const intlMiddleware = createMiddleware(routing);
 
 export default async function middleware(request: NextRequest) {
   // 1. Run i18n middleware
-  const response = intlMiddleware(request);
+  let response = intlMiddleware(request);
 
   // 2. Check if the target route requires authentication or admin privileges
   const pathname = request.nextUrl.pathname;
@@ -18,7 +18,8 @@ export default async function middleware(request: NextRequest) {
   const isProtected = /^\/(id|en)\/(upload|me)(\/.*)?$/.test(pathname) || isAdminRoute;
 
   if (isProtected) {
-    const { user } = await updateSession(request, response);
+    const { user, response: supabaseResponse } = await updateSession(request, response);
+    response = supabaseResponse;
 
     if (!user) {
       const loginUrl = new URL(`/${locale}/login`, request.url);
@@ -30,6 +31,10 @@ export default async function middleware(request: NextRequest) {
       // Non-admin trying to access /admin -> redirect to /me
       return NextResponse.redirect(new URL(`/${locale}/me`, request.url));
     }
+  } else {
+    // Still refresh session on non-protected routes so cookies stay fresh
+    const { response: supabaseResponse } = await updateSession(request, response);
+    response = supabaseResponse;
   }
 
   return response;
