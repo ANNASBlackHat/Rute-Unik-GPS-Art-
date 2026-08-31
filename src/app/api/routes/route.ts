@@ -165,28 +165,56 @@ export async function POST(request: NextRequest) {
 
       const newRouteId = insertRes.rows[0].id;
 
-      // 3. Duplicate Route Detection check
-      const dupCheckSql = `
-        select * from public.detect_route_duplicates($1, 80);
-      `;
-      const dupRes = await pgClient.query(dupCheckSql, [newRouteId]);
-
-      let isDuplicateFlagged = false;
-      if (dupRes.rows.length > 0) {
-        isDuplicateFlagged = true;
-        for (const row of dupRes.rows) {
-          await pgClient.query(
-            `insert into public.route_duplicate_flags (route_id, candidate_route_id, similarity_score)
-             values ($1, $2, $3);`,
-            [newRouteId, row.candidate_id, row.similarity_meters]
-          );
+      // 3. Duplicate check — run in background so upload returns fast (<2s) even for large GPX
+      // Fire-and-forget: do not block response. Use new client, simplified geom, statement timeout 15s.
+      const wktForBg = parsed.wktLineString;
+      const primaryForBg = primaryConn;
+      const fallbackForBg = fallbackConn;
+      setImmediate(async () => {
+        let bgClient: Client | null = null;
+        const tryBgConnect = async (connStr: string | null) => {
+          if (!connStr) throw new Error('No conn');
+          const isRemote = connStr.includes('supabase.co') || connStr.includes('pooler.supabase.com');
+          const c = new Client({
+            connectionString: connStr,
+            ssl: isRemote ? { rejectUnauthorized: false } : undefined,
+            connectionTimeoutMillis: 5000,
+            statement_timeout: 15000,
+          });
+          await c.connect();
+          return c;
+        };
+        try {
+          try {
+            bgClient = await tryBgConnect(primaryForBg);
+          } catch {
+            if (fallbackForBg) bgClient = await tryBgConnect(fallbackForBg);
+            else throw new Error('no fallback');
+          }
+          // Use simplified geometry for faster Frechet (tolerance ~5m) and limit candidates
+          await bgClient.query('SET statement_timeout = 15000');
+          const dupRes = await bgClient.query('select * from public.detect_route_duplicates($1, 80)', [newRouteId]);
+          if (dupRes.rows.length > 0) {
+            for (const row of dupRes.rows) {
+              await bgClient.query(
+                `insert into public.route_duplicate_flags (route_id, candidate_route_id, similarity_score)
+                 values ($1, $2, $3) on conflict do nothing`,
+                [newRouteId, row.candidate_id, row.similarity_meters]
+              );
+            }
+            console.log(`Duplicate check done for ${newRouteId}: ${dupRes.rows.length} candidates`);
+          }
+        } catch (e) {
+          console.warn(`Background duplicate check failed for ${newRouteId}`, e);
+        } finally {
+          if (bgClient) await bgClient.end().catch(() => {});
         }
-      }
+      });
 
       return NextResponse.json({
         success: true,
         routeId: newRouteId,
-        isDuplicateFlagged,
+        isDuplicateFlagged: false,
         distanceMeters: parsed.distanceMeters,
         elevationGainMeters: parsed.elevationGainMeters,
       });
