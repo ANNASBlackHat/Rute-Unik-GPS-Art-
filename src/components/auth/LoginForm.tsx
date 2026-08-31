@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Eye, EyeOff } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 export function LoginForm({ locale }: { locale: string }) {
@@ -22,6 +22,7 @@ export function LoginForm({ locale }: { locale: string }) {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleGoogleLogin = async () => {
     setGoogleLoading(true);
@@ -149,16 +150,28 @@ export function LoginForm({ locale }: { locale: string }) {
           <label className="block uppercase text-ink/70 font-semibold text-[11px]">
             {t('passwordLabel')}
           </label>
-          <input
-            id="auth-password"
-            type="password"
-            required
-            minLength={6}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="••••••••"
-            className="w-full px-3 py-2 bg-paper border border-contour-tan rounded-[4px] text-ink focus:outline-none focus:border-ink"
-          />
+          <div className="relative">
+            <input
+              id="auth-password"
+              type={showPassword ? 'text' : 'password'}
+              required
+              minLength={6}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              className="w-full px-3 py-2 pr-10 bg-paper border border-contour-tan rounded-[4px] text-ink focus:outline-none focus:border-ink"
+            />
+            <button
+              type="button"
+              id="btn-toggle-password"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              aria-pressed={showPassword}
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute inset-y-0 right-0 flex items-center pr-3 text-ink/60 hover:text-ink transition-colors cursor-pointer"
+            >
+              {showPassword ? <EyeOff size={16} strokeWidth={1.5} /> : <Eye size={16} strokeWidth={1.5} />}
+            </button>
+          </div>
         </div>
 
         <div className="pt-2">
