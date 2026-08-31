@@ -172,7 +172,7 @@ export async function POST(request: NextRequest) {
       const fallbackForBg = fallbackConn;
       setImmediate(async () => {
         let bgClient: Client | null = null;
-        const tryBgConnect = async (connStr: string | null) => {
+        const tryBgConnect = async (connStr: string | null | undefined) => {
           if (!connStr) throw new Error('No conn');
           const isRemote = connStr.includes('supabase.co') || connStr.includes('pooler.supabase.com');
           const c = new Client({
