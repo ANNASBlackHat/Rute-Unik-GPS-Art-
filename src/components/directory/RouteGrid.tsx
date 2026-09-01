@@ -3,8 +3,8 @@
 import React, { useMemo } from 'react';
 import { RouteItem, RouteCard } from './RouteCard';
 import { CityFilter, CityOption } from './CityFilter';
-import { DistanceFilter } from './DistanceFilter';
-import { ShapeFilter } from './ShapeFilter';
+import { ShapeSelect } from './ShapeSelect';
+import { DistanceSelect } from './DistanceSelect';
 import { RouteSearchBar } from './RouteSearchBar';
 import { RouteSortSelect } from './RouteSortSelect';
 import { SurpriseMeButton } from './SurpriseMeButton';
@@ -65,12 +65,16 @@ export function RouteGrid({ initialRoutes, cities }: RouteGridProps) {
     return matchByName ? matchByName.id : filters.city;
   }, [filters.city, citiesWithCounts]);
 
+  const selectedCityObj = useMemo(() => {
+    if (!selectedCityId) return null;
+    return citiesWithCounts.find((c) => c.id === selectedCityId) || null;
+  }, [selectedCityId, citiesWithCounts]);
+
   const handleSelectCity = (cityId: string | null) => {
     if (!cityId) {
       updateFilters({ city: null });
       return;
     }
-    // Encode city name in URL for readability (e.g. ?city=solo)
     const city = citiesWithCounts.find((c) => c.id === cityId);
     updateFilters({ city: city ? city.name.toLowerCase() : cityId });
   };
@@ -110,7 +114,7 @@ export function RouteGrid({ initialRoutes, cities }: RouteGridProps) {
       }
     }
 
-    // 3. Shape Filter
+    // 3. Shape Filter (null or 'all' matches all shapes)
     if (filters.shape) {
       result = result.filter((r) => r.shape_category === filters.shape);
     }
@@ -163,17 +167,27 @@ export function RouteGrid({ initialRoutes, cities }: RouteGridProps) {
   }, [initialRoutes, selectedCityId, filters]);
 
   return (
-    <div className="space-y-6">
-      {/* Search Bar & Primary Actions Row */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-        <div className="flex-1 max-w-md">
+    <div className="space-y-4">
+      {/* 1. Search Bar & Dropdown Filters Row */}
+      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5">
+        <div className="flex-1 max-w-lg">
           <RouteSearchBar
             value={filters.q}
             onChange={(q) => updateFilters({ q })}
           />
         </div>
 
-        <div className="flex items-center gap-2 justify-between sm:justify-end">
+        {/* Dropdowns + Action */}
+        <div className="flex flex-wrap items-center gap-2 justify-between sm:justify-end">
+          <ShapeSelect
+            value={filters.shape}
+            onChange={(shape) => updateFilters({ shape })}
+            categoryCounts={categoryCounts}
+          />
+          <DistanceSelect
+            value={filters.distance}
+            onChange={(distance) => updateFilters({ distance })}
+          />
           <RouteSortSelect
             value={filters.sort}
             onChange={(sort) => updateFilters({ sort })}
@@ -185,59 +199,89 @@ export function RouteGrid({ initialRoutes, cities }: RouteGridProps) {
         </div>
       </div>
 
-      {/* Filter Control Section */}
-      <div className="p-4 bg-paper/60 border border-contour-tan rounded-[8px] space-y-4 shadow-sm">
-        {/* City Chips Row */}
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-data uppercase tracking-wider text-ink/70 font-semibold">
-              {t('selectCity')}
-            </span>
-          </div>
-          <CityFilter
-            cities={citiesWithCounts}
-            selectedCityId={selectedCityId}
-            onSelectCity={handleSelectCity}
-            totalCount={initialRoutes.length}
-          />
-        </div>
-
-        {/* Shape / Theme Chips Row (Equal visual weight to city chips) */}
-        <div className="space-y-1.5 pt-2 border-t border-contour-tan/50">
-          <span className="text-[11px] font-data uppercase tracking-wider text-ink/70 font-semibold">
-            {t('shapeLabel')}
-          </span>
-          <ShapeFilter
-            selectedShape={filters.shape}
-            onSelectShape={(shape) => updateFilters({ shape })}
-            categoryCounts={categoryCounts}
-          />
-        </div>
-
-        {/* Distance Buckets Row */}
-        <div className="space-y-1.5 pt-2 border-t border-contour-tan/50">
-          <span className="text-[11px] font-data uppercase tracking-wider text-ink/70 font-semibold">
-            {t('distanceLabel')}
-          </span>
-          <DistanceFilter
-            selectedBucket={filters.distance}
-            onSelectBucket={(distance) => updateFilters({ distance })}
-          />
-        </div>
+      {/* 2. City Chips Row (Primary geographic scan with route counts) */}
+      <div className="pt-1 pb-1">
+        <CityFilter
+          cities={citiesWithCounts}
+          selectedCityId={selectedCityId}
+          onSelectCity={handleSelectCity}
+          totalCount={initialRoutes.length}
+        />
       </div>
 
-      {/* Results Header & Active Filter Clearer */}
-      <div className="flex items-center justify-between gap-4 border-b border-contour-tan pb-3 text-xs font-data text-ink/70">
-        <div className="flex items-center gap-2">
+      {/* 3. Results Header & Active Filter Pills */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-contour-tan pb-2.5 text-xs font-data text-ink/70">
+        <div className="flex flex-wrap items-center gap-2">
           <span className="font-bold text-ink text-sm">
             {filteredRoutes.length} {t('routesCount')}
           </span>
+
+          {/* Active Filter Badges with 1-click removal */}
+          {selectedCityObj && (
+            <button
+              type="button"
+              onClick={() => updateFilters({ city: null })}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] bg-paper border border-contour-tan text-ink text-[11px] hover:border-ink cursor-pointer transition-colors"
+              title="Remove city filter"
+            >
+              <span>City: {selectedCityObj.name}</span>
+              <X size={11} strokeWidth={2} aria-hidden="true" />
+            </button>
+          )}
+
+          {filters.shape && (
+            <button
+              type="button"
+              onClick={() => updateFilters({ shape: null })}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] bg-paper border border-contour-tan text-ink text-[11px] hover:border-ink cursor-pointer transition-colors"
+              title="Remove shape filter"
+            >
+              <span>
+                Shape:{' '}
+                {filters.shape === 'animal'
+                  ? t('shapeAnimal')
+                  : filters.shape === 'object'
+                  ? t('shapeObject')
+                  : filters.shape === 'symbol'
+                  ? t('shapeSymbol')
+                  : filters.shape === 'letter_number'
+                  ? t('shapeLetterNumber')
+                  : t('shapeAbstract')}
+              </span>
+              <X size={11} strokeWidth={2} aria-hidden="true" />
+            </button>
+          )}
+
+          {filters.distance && (
+            <button
+              type="button"
+              onClick={() => updateFilters({ distance: null })}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] bg-paper border border-contour-tan text-ink text-[11px] hover:border-ink cursor-pointer transition-colors"
+              title="Remove distance filter"
+            >
+              <span>Distance: {filters.distance} km</span>
+              <X size={11} strokeWidth={2} aria-hidden="true" />
+            </button>
+          )}
+
+          {filters.q.trim() && (
+            <button
+              type="button"
+              onClick={() => updateFilters({ q: '' })}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] bg-paper border border-contour-tan text-ink text-[11px] hover:border-ink cursor-pointer transition-colors"
+              title="Clear search query"
+            >
+              <span>&quot;{filters.q.trim()}&quot;</span>
+              <X size={11} strokeWidth={2} aria-hidden="true" />
+            </button>
+          )}
+
           {hasActiveFilters && (
             <button
               type="button"
               id="btn-clear-filters"
               onClick={clearAllFilters}
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] bg-chalk border border-contour-tan text-ink/80 hover:text-ink hover:border-ink cursor-pointer transition-colors"
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[3px] bg-chalk border border-contour-tan text-ink/80 hover:text-ink hover:border-ink cursor-pointer transition-colors font-semibold"
             >
               <X size={12} strokeWidth={2} aria-hidden="true" />
               <span>{t('clearFilters')}</span>
@@ -246,7 +290,7 @@ export function RouteGrid({ initialRoutes, cities }: RouteGridProps) {
         </div>
       </div>
 
-      {/* Routes Grid Display */}
+      {/* 4. Routes Grid Display */}
       {filteredRoutes.length === 0 ? (
         <div className="paper-card p-12 text-center space-y-3 bg-chalk rounded-[8px] border border-contour-tan">
           <p className="font-display text-base text-ink uppercase">
