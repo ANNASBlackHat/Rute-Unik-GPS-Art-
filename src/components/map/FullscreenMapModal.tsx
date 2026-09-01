@@ -13,6 +13,7 @@ interface FullscreenMapModalProps {
   progress: number;
   onProgressChange: (t: number) => void;
   onWaypointSelect?: (km: number) => void;
+  durationSeconds?: number;
 }
 
 export function FullscreenMapModal({
@@ -22,6 +23,7 @@ export function FullscreenMapModal({
   progress,
   onProgressChange,
   onWaypointSelect,
+  durationSeconds = 75,
 }: FullscreenMapModalProps) {
   const [map, setMap] = useState<maplibregl.Map | null>(null);
 
@@ -84,7 +86,7 @@ export function FullscreenMapModal({
           coordinates={coordinates}
           progress={progress}
           onProgressChange={onProgressChange}
-          durationSeconds={20}
+          durationSeconds={durationSeconds}
         />
       </div>
     </div>

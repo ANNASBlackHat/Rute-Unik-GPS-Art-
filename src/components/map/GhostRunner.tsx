@@ -18,7 +18,7 @@ interface GhostRunnerProps {
 export function GhostRunner({
   map,
   coordinates,
-  durationSeconds = 20,
+  durationSeconds = 75,
   progress: externalProgress,
   onProgressChange,
   className = '',
@@ -26,7 +26,7 @@ export function GhostRunner({
   const t = useTranslations('runMode');
   const [isPlaying, setIsPlaying] = useState(false);
   const [internalProgress, setInternalProgress] = useState(0); // 0 to 1
-  const [speed, setSpeed] = useState<1 | 2 | 4>(1);
+  const [speed, setSpeed] = useState<0.5 | 1 | 2 | 4>(1);
 
   const activeProgress =
     typeof externalProgress === 'number' ? externalProgress : internalProgress;
@@ -187,9 +187,29 @@ export function GhostRunner({
     };
   }, []);
 
+  const handleSetSpeed = useCallback(
+    (newSpeed: 0.5 | 1 | 2 | 4) => {
+      if (isPlaying && startTimeRef.current) {
+        const now = performance.now();
+        const elapsed = (now - startTimeRef.current) / 1000;
+        const effectiveDuration = durationSeconds / speed;
+        const currentT = Math.min(
+          1,
+          pausedProgressRef.current + elapsed / effectiveDuration
+        );
+        pausedProgressRef.current = currentT;
+        startTimeRef.current = now;
+      }
+      setSpeed(newSpeed);
+    },
+    [isPlaying, durationSeconds, speed]
+  );
+
   const progressPercent = Math.round(activeProgress * 100);
   const elapsedSecs = Math.round(activeProgress * durationSeconds);
-  const elapsedFormatted = `00:${elapsedSecs < 10 ? '0' : ''}${elapsedSecs}`;
+  const mins = Math.floor(elapsedSecs / 60);
+  const remSecs = elapsedSecs % 60;
+  const elapsedFormatted = `${mins < 10 ? '0' : ''}${mins}:${remSecs < 10 ? '0' : ''}${remSecs}`;
 
   return (
     <div
@@ -249,18 +269,18 @@ export function GhostRunner({
           <RotateCcw size={13} strokeWidth={2} aria-hidden="true" />
         </button>
 
-        {/* Speed Selector (1x / 2x / 4x) */}
+        {/* Speed Selector (0.5x / 1x / 2x / 4x) */}
         <div
           className="inline-flex rounded-[4px] border border-contour-tan bg-paper/50 p-0.5"
           role="group"
           aria-label="Playback speed"
         >
-          {([1, 2, 4] as const).map((s) => (
+          {([0.5, 1, 2, 4] as const).map((s) => (
             <button
               key={s}
               type="button"
               id={`btn-speed-${s}x`}
-              onClick={() => setSpeed(s)}
+              onClick={() => handleSetSpeed(s)}
               className={`min-h-7 px-2 py-0.5 rounded-[3px] text-[11px] font-data font-bold transition-colors cursor-pointer select-none ${
                 speed === s
                   ? 'bg-ink text-chalk'

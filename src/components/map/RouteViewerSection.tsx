@@ -37,16 +37,22 @@ export function RouteViewerSection({
     [distanceMeters]
   );
 
+  // Proportional smooth playback duration: scaled for realistic, calm inspection (min 60s, max 120s)
+  const playbackDuration = Math.max(
+    60,
+    Math.min(120, Math.round(distanceMeters / 150))
+  );
+
   return (
     <div className="space-y-6">
       {/* 1. Interactive Route Map Card */}
-      <Card className="p-3 sm:p-4 space-y-4">
+      <Card className="p-4 sm:p-6 space-y-4">
         <RouteMap
           coordinates={coordinates}
           onMapReady={setMap}
           onExpandFullscreen={() => setIsFullscreen(true)}
           onWaypointClick={handleWaypointSelect}
-          className="w-full h-80 sm:h-96"
+          className="w-full h-[400px] sm:h-[480px]"
         />
 
         {/* Map Legend */}
@@ -69,7 +75,7 @@ export function RouteViewerSection({
           coordinates={coordinates}
           progress={progress}
           onProgressChange={setProgress}
-          durationSeconds={20}
+          durationSeconds={playbackDuration}
         />
       </Card>
 
@@ -92,6 +98,7 @@ export function RouteViewerSection({
         progress={progress}
         onProgressChange={setProgress}
         onWaypointSelect={handleWaypointSelect}
+        durationSeconds={playbackDuration}
       />
     </div>
   );
