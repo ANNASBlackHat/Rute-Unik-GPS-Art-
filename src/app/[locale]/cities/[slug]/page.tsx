@@ -1,3 +1,4 @@
+import React, { Suspense } from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
@@ -118,7 +119,7 @@ export async function generateMetadata({
   const data = await getCityPageData(slug);
   if (!data) return {};
 
-  const { city } = data;
+  const { city, routes } = data;
   const tCommon = await getTranslations('common');
   const tCities = await getTranslations('cities');
 
@@ -131,7 +132,10 @@ export async function generateMetadata({
   };
 
   const title = tCities('title', { city: city.name });
-  const description = tCities('description', { city: city.name });
+  const description = tCities('description', {
+    city: city.name,
+    count: String(routes.length),
+  });
 
   return {
     title,
@@ -210,7 +214,15 @@ export default async function CityPage({
         </p>
       </div>
 
-      <RouteGrid initialRoutes={routes} cities={cities} citySlug={citySlugValue} />
+      <Suspense
+        fallback={
+          <div className="font-data text-ink/50 p-12 text-center text-xs tracking-wider uppercase">
+            Loading Directory...
+          </div>
+        }
+      >
+        <RouteGrid initialRoutes={routes} cities={cities} citySlug={citySlugValue} />
+      </Suspense>
     </div>
   );
 }
