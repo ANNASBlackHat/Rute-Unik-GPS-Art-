@@ -72,6 +72,10 @@ export default async function HomePage({
         status,
         thumbnail_svg,
         gpx_raw,
+        download_count,
+        view_count,
+        share_count,
+        start_count,
         created_at,
         cities (
           name
@@ -97,6 +101,9 @@ export default async function HomePage({
     thumbnail_svg: string;
     gpx_raw?: string | null;
     download_count?: number | null;
+    view_count?: number | null;
+    share_count?: number | null;
+    start_count?: number | null;
     shape_category?: ShapeCategory | null;
     created_at: string;
     cities: { name?: string } | null;
@@ -116,6 +123,9 @@ export default async function HomePage({
     shape_category: r.shape_category || inferShapeCategory(r.name),
     elevation_points: extractElevationSamples(r.gpx_raw, 20),
     download_count: Number(r.download_count || 0),
+    view_count: Number(r.view_count || 0),
+    share_count: Number(r.share_count || 0),
+    start_count: Number(r.start_count || 0),
     created_at: r.created_at,
   }));
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminUser } from '@/lib/admin';
-import { Client } from 'pg';
+import { getDbClient } from '@/lib/db';
 
 export async function POST(
   request: NextRequest,
@@ -11,14 +11,7 @@ export async function POST(
 
   const { id } = await params;
 
-  const client = new Client({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_URL?.includes('supabase.co')
-      ? { rejectUnauthorized: false }
-      : undefined,
-  });
-
-  await client.connect();
+  const client = await getDbClient();
 
   try {
     const res = await client.query(

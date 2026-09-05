@@ -1,6 +1,6 @@
 import React from 'react';
 import { setRequestLocale } from 'next-intl/server';
-import { Client } from 'pg';
+import { getDbClient } from '@/lib/db';
 import { DuplicatesList } from '@/components/admin/DuplicatesList';
 import type { DuplicateFlagItem } from '@/components/admin/DuplicateCompareMap';
 
@@ -14,16 +14,11 @@ export default async function AdminDuplicatesPage({
   const { locale } = await params;
   setRequestLocale(locale);
 
-  const client = new Client({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_URL?.includes('supabase.co')
-      ? { rejectUnauthorized: false }
-      : undefined,
-  });
+  
 
   let duplicates: DuplicateFlagItem[] = [];
+  const client = await getDbClient();
   try {
-    await client.connect();
     const query = `
       select 
         f.id as flag_id,

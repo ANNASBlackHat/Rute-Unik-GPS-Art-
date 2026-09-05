@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useRouter } from '@/i18n/routing';
 import { RouteItem, RouteCard } from './RouteCard';
 import { CityFilter, CityOption } from './CityFilter';
 import { ShapeSelect } from './ShapeSelect';
@@ -12,16 +14,25 @@ import { useRouteFilters } from '@/hooks/useRouteFilters';
 import { useTranslations } from 'next-intl';
 import { X } from 'lucide-react';
 import { ShapeCategory } from '@/lib/shape-category';
+import { citySlug } from '@/lib/city';
 
 interface RouteGridProps {
   initialRoutes: RouteItem[];
   cities: CityOption[];
+  /** When set, the city is part of the URL path (e.g. /cities/[slug]).
+   *  City switching then navigates between path-based pages and the city is
+   *  not written to a ?city= query param. */
+  citySlug?: string;
 }
 
-export function RouteGrid({ initialRoutes, cities }: RouteGridProps) {
+export function RouteGrid({ initialRoutes, cities, citySlug: citySlugProp }: RouteGridProps) {
   const t = useTranslations('home');
+  const router = useRouter();
+  const cityInPath = Boolean(citySlugProp);
   const { filters, updateFilters, clearAllFilters, hasActiveFilters } =
-    useRouteFilters();
+    useRouteFilters({ cityInPath });
+
+  const searchParams = useSearchParams();
 
   // Active cities with counts (> 0 only)
   const citiesWithCounts = useMemo(() => {
@@ -54,16 +65,28 @@ export function RouteGrid({ initialRoutes, cities }: RouteGridProps) {
     return counts;
   }, [initialRoutes]);
 
-  // Resolve selectedCityId from URL param (supports both UUID and lowercase city name)
+  // Resolve selectedCityId. In path mode it comes from the citySlug prop;
+  // otherwise from the URL ?city= param (supports both UUID and lowercase name).
   const selectedCityId = useMemo(() => {
+    if (cityInPath && citySlugProp) {
+      const matchBySlug = citiesWithCounts.find(
+        (c) => citySlug(c.name) === citySlugProp.toLowerCase(),
+      );
+      if (matchBySlug) return matchBySlug.id;
+      const matchByName = citiesWithCounts.find(
+        (c) => c.name.toLowerCase() === citySlugProp.toLowerCase(),
+      );
+      return matchByName ? matchByName.id : citySlugProp;
+    }
+
     if (!filters.city) return null;
     const matchById = citiesWithCounts.find((c) => c.id === filters.city);
     if (matchById) return matchById.id;
     const matchByName = citiesWithCounts.find(
-      (c) => c.name.toLowerCase() === filters.city?.toLowerCase()
+      (c) => c.name.toLowerCase() === filters.city?.toLowerCase(),
     );
     return matchByName ? matchByName.id : filters.city;
-  }, [filters.city, citiesWithCounts]);
+  }, [filters.city, citiesWithCounts, cityInPath, citySlugProp]);
 
   const selectedCityObj = useMemo(() => {
     if (!selectedCityId) return null;
@@ -71,11 +94,25 @@ export function RouteGrid({ initialRoutes, cities }: RouteGridProps) {
   }, [selectedCityId, citiesWithCounts]);
 
   const handleSelectCity = (cityId: string | null) => {
+    const city = cityId
+      ? citiesWithCounts.find((c) => c.id === cityId) || null
+      : null;
+
+    // In path mode, switching city navigates between /cities/[slug] pages,
+    // preserving any currently active query filters.
+    if (cityInPath) {
+      const current = new URLSearchParams(searchParams.toString());
+      current.delete('city'); // city lives in the path, never in the query
+      const qs = current.toString();
+      const target = city ? `/cities/${citySlug(city.name)}` : '/';
+      router.push(qs ? `${target}?${qs}` : target, { scroll: false });
+      return;
+    }
+
     if (!cityId) {
       updateFilters({ city: null });
       return;
     }
-    const city = citiesWithCounts.find((c) => c.id === cityId);
     updateFilters({ city: city ? city.name.toLowerCase() : cityId });
   };
 
@@ -139,9 +176,23 @@ export function RouteGrid({ initialRoutes, cities }: RouteGridProps) {
         sorted.sort((a, b) => b.distance_m - a.distance_m);
         break;
       case 'popular':
-        sorted.sort(
-          (a, b) => (b.download_count || 0) - (a.download_count || 0)
-        );
+        sorted.sort((a, b) => {
+          const scoreA =
+            (a.download_count || 0) * 3 +
+            (a.start_count || 0) * 4 +
+            (a.share_count || 0) * 5 +
+            (a.view_count || 0);
+          const scoreB =
+            (b.download_count || 0) * 3 +
+            (b.start_count || 0) * 4 +
+            (b.share_count || 0) * 5 +
+            (b.view_count || 0);
+          if (scoreB !== scoreA) return scoreB - scoreA;
+          if ((b.download_count || 0) !== (a.download_count || 0)) {
+            return (b.download_count || 0) - (a.download_count || 0);
+          }
+          return (b.view_count || 0) - (a.view_count || 0);
+        });
         break;
       case 'newest':
       default: {
@@ -216,8 +267,8 @@ export function RouteGrid({ initialRoutes, cities }: RouteGridProps) {
             {filteredRoutes.length} {t('routesCount')}
           </span>
 
-          {/* Active Filter Badges with 1-click removal */}
-          {selectedCityObj && (
+          {/* Active Filter Badges with 1-click removal (city pill only in query mode) */}
+          {selectedCityObj && !cityInPath && (
             <button
               type="button"
               onClick={() => updateFilters({ city: null })}

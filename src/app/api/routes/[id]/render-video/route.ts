@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Client } from 'pg';
+import { getDbClient } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,18 +16,15 @@ export async function POST(
   const { id: routeId } = await params;
 
   // Validate route exists
-  const client = new Client({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_URL?.includes('supabase.co') ? { rejectUnauthorized: false } : undefined,
-  });
+  
 
   let body: { width?: number; height?: number; fps?: number; durationSeconds?: number } = {};
   try {
     body = await request.json().catch(() => ({}));
   } catch {}
 
+  const client = await getDbClient();
   try {
-    await client.connect();
 
     const routeRes = await client.query('select id from public.routes where id = $1', [routeId]);
     if (routeRes.rows.length === 0) {

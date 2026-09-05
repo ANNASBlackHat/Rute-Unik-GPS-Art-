@@ -1,19 +1,12 @@
 import { NextResponse } from 'next/server';
 import { requireAdminUser } from '@/lib/admin';
-import { Client } from 'pg';
+import { getDbClient } from '@/lib/db';
 
 export async function GET() {
   const auth = await requireAdminUser();
   if (!auth.authorized) return auth.response;
 
-  const client = new Client({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_URL?.includes('supabase.co')
-      ? { rejectUnauthorized: false }
-      : undefined,
-  });
-
-  await client.connect();
+  const client = await getDbClient();
 
   try {
     const query = `

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Client } from 'pg';
+import { getDbClient } from '@/lib/db';
 
 export async function POST(
   request: NextRequest,
@@ -7,11 +7,7 @@ export async function POST(
 ) {
   const { id } = await context.params;
   if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
-  const c = new Client({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_URL?.includes('supabase.co') ? { rejectUnauthorized: false } : undefined,
-  });
-  await c.connect();
+  const c = await getDbClient();
   try {
     await c.query('update public.routes set start_count = coalesce(start_count,0)+1 where id=$1', [id]);
     const r = await c.query('select start_count from public.routes where id=$1', [id]);

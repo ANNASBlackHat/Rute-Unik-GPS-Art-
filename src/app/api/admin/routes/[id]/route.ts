@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminUser } from '@/lib/admin';
-import { Client } from 'pg';
+import { getDbClient } from '@/lib/db';
 
 export async function DELETE(
   request: NextRequest,
@@ -9,11 +9,7 @@ export async function DELETE(
   const auth = await requireAdminUser();
   if (!auth.authorized) return auth.response;
   const { id } = await params;
-  const client = new Client({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_URL?.includes('supabase.co') ? { rejectUnauthorized: false } : undefined,
-  });
-  await client.connect();
+  const client = await getDbClient();
   try {
     await client.query('delete from public.route_duplicate_flags where route_id=$1 or candidate_route_id=$1', [id]);
     await client.query('delete from public.route_views where route_id=$1', [id]).catch(() => {});
@@ -34,14 +30,7 @@ export async function PATCH(
   const body = await request.json();
   const { name, city_id, status } = body;
 
-  const client = new Client({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_URL?.includes('supabase.co')
-      ? { rejectUnauthorized: false }
-      : undefined,
-  });
-
-  await client.connect();
+  const client = await getDbClient();
 
   try {
     const query = `

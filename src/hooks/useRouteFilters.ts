@@ -15,10 +15,11 @@ export interface RouteFilterState {
   sort: RouteSortOption;
 }
 
-export function useRouteFilters() {
+export function useRouteFilters(options?: { cityInPath?: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const cityInPath = Boolean(options?.cityInPath);
 
   const filters: RouteFilterState = useMemo(() => {
     const city = searchParams.get('city') || null;
@@ -57,11 +58,15 @@ export function useRouteFilters() {
 
       const next = { ...filters, ...updates };
 
-      // Update City
-      if (next.city) {
-        current.set('city', next.city);
-      } else {
-        current.delete('city');
+      // Update City (only when city is a query param; when the city lives in
+      // the path, e.g. /cities/[slug], navigation to another city is handled
+      // by RouteGrid via router.push, and no city= param is used).
+      if (!cityInPath) {
+        if (next.city) {
+          current.set('city', next.city);
+        } else {
+          current.delete('city');
+        }
       }
 
       // Update Distance
@@ -97,7 +102,7 @@ export function useRouteFilters() {
       const targetUrl = queryString ? `${pathname}?${queryString}` : pathname;
       router.replace(targetUrl, { scroll: false });
     },
-    [filters, pathname, router, searchParams]
+    [filters, pathname, router, searchParams, cityInPath]
   );
 
   const clearAllFilters = useCallback(() => {

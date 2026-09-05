@@ -2,7 +2,7 @@ import React from 'react';
 import { setRequestLocale } from 'next-intl/server';
 import { getAuthUser } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import { Client } from 'pg';
+import { getDbClient } from '@/lib/db';
 
 export default async function AdminUsersPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
@@ -10,12 +10,17 @@ export default async function AdminUsersPage({ params }: { params: Promise<{ loc
   const { user } = await getAuthUser();
   if (!user || user.role !== 'admin') redirect(`/${locale}/admin`);
 
-  const c = new Client({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_URL?.includes('supabase.co') ? { rejectUnauthorized: false } : undefined,
-  });
-  await c.connect();
-  let users: any[] = [];
+  interface AdminUserRow {
+    id: string;
+    email: string | null;
+    full_name: string | null;
+    role: string;
+    created_at: string;
+    route_count: number;
+  }
+
+  const c = await getDbClient();
+  let users: AdminUserRow[] = [];
   let warning: string | null = null;
   try {
     try {
@@ -27,7 +32,14 @@ export default async function AdminUsersPage({ params }: { params: Promise<{ loc
         // fallback: try auth.users directly (local dev without profiles sync)
         try {
           const r2 = await c.query(`select id, email, raw_user_meta_data->>'full_name' as full_name, coalesce(raw_user_meta_data->>'role','runner') as role, created_at from auth.users order by created_at desc`);
-          users = r2.rows.map((u: any)=>({ ...u, route_count: 0 }));
+          users = r2.rows.map((u: Record<string, unknown>) => ({
+            id: String(u.id),
+            email: (u.email as string) || null,
+            full_name: (u.full_name as string) || null,
+            role: (u.role as string) || 'runner',
+            created_at: String(u.created_at),
+            route_count: 0,
+          }));
         } catch {
           warning = 'Profiles table not initialized in local DB — run Supabase migrations.';
           users = [];

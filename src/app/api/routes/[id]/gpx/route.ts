@@ -23,12 +23,8 @@ export async function GET(
 
   // fire-and-forget download counter
   try {
-    const { Client } = await import('pg');
-    const c = new Client({
-      connectionString: process.env.DATABASE_URL,
-      ssl: process.env.DATABASE_URL?.includes('supabase.co') ? { rejectUnauthorized: false } : undefined,
-    });
-    await c.connect();
+    const { getDbClient } = await import('@/lib/db');
+    const c = await getDbClient();
     await c.query('update public.routes set download_count = coalesce(download_count,0)+1 where id=$1', [id]);
     await c.end().catch(() => {});
   } catch {}

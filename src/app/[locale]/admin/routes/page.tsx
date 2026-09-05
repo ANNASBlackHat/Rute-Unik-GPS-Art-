@@ -1,6 +1,6 @@
 import React from 'react';
 import { setRequestLocale } from 'next-intl/server';
-import { Client } from 'pg';
+import { getDbClient } from '@/lib/db';
 import { CatalogManager, CatalogRouteItem } from '@/components/admin/CatalogManager';
 
 export const dynamic = 'force-dynamic';
@@ -13,16 +13,11 @@ export default async function AdminRoutesPage({
   const { locale } = await params;
   setRequestLocale(locale);
 
-  const client = new Client({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_URL?.includes('supabase.co')
-      ? { rejectUnauthorized: false }
-      : undefined,
-  });
+  
 
   let routes: CatalogRouteItem[] = [];
+  const client = await getDbClient();
   try {
-    await client.connect();
     let res;
     try {
       res = await client.query(`

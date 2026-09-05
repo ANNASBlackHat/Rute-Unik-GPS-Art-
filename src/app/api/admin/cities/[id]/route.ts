@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminUser } from '@/lib/admin';
-import { Client } from 'pg';
+import { getDbClient } from '@/lib/db';
 
 export async function PATCH(
   request: NextRequest,
@@ -13,14 +13,7 @@ export async function PATCH(
   const body = await request.json();
   const { name, country } = body;
 
-  const client = new Client({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_URL?.includes('supabase.co')
-      ? { rejectUnauthorized: false }
-      : undefined,
-  });
-
-  await client.connect();
+  const client = await getDbClient();
 
   try {
     const query = `
@@ -52,14 +45,7 @@ export async function DELETE(
 
   const { id } = await params;
 
-  const client = new Client({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_URL?.includes('supabase.co')
-      ? { rejectUnauthorized: false }
-      : undefined,
-  });
-
-  await client.connect();
+  const client = await getDbClient();
 
   try {
     // Check if city has routes

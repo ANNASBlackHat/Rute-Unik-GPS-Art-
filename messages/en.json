@@ -24,6 +24,7 @@
     "community": "COMMUNITY",
     "distance": "DISTANCE",
     "elevation": "ELEV. GAIN",
+    "downloads": "DOWNLOADS",
     "viewRoute": "VIEW ROUTE",
     "routesCount": "Routes",
     "noRoutesFound": "No routes match your filters",
@@ -200,5 +201,9 @@
   "languages": {
     "id": "Bahasa Indonesia",
     "en": "English"
+  },
+  "cities": {
+    "title": "GPS-Art Running Routes in {city}",
+    "description": "{count} GPS-art running route(s) in {city} - browse the map, distance and elevation, then download the GPX to run it yourself."
   }
 }

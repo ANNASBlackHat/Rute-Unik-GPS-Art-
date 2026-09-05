@@ -7,6 +7,47 @@ export interface CityWithCenter {
   lat: number | null;
 }
 
+export interface CityRow {
+  id: string;
+  name: string;
+  country: string;
+}
+
+/**
+ * Build a URL slug from a city name (lowercased, spaces -> '-', non-alnum stripped).
+ * e.g. "Bandung" -> "bandung", "New York" -> "new-york", "Côte d'Ivoire" -> "cte-divoire".
+ */
+export function citySlug(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '') // strip diacritics
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+/**
+ * Resolve a city row from a URL slug. Returns the first match or undefined.
+ */
+export function resolveCityBySlug(
+  cities: CityRow[],
+  slug: string,
+): CityRow | undefined {
+  if (!slug) return undefined;
+  const target = slug.toLowerCase();
+  return cities.find((c) => citySlug(c.name) === target);
+}
+
+/**
+ * Resolve a city id from a slug, returning undefined if not found.
+ */
+export function resolveCityIdBySlug(
+  cities: CityRow[],
+  slug: string,
+): string | undefined {
+  return resolveCityBySlug(cities, slug)?.id;
+}
+
 /**
  * Decode EWKB hex string for Point with SRID 4326 (as returned by PostgREST for geometry)
  * Format: 0101000020E6100000 + 8 bytes little-endian double lon + 8 bytes lat

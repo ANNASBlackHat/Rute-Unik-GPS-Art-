@@ -1,15 +1,11 @@
 import { NextResponse } from 'next/server';
 import { requireAdminUser } from '@/lib/admin';
-import { Client } from 'pg';
+import { getDbClient } from '@/lib/db';
 
 export async function GET() {
   const auth = await requireAdminUser();
   if (!auth.authorized) return auth.response;
-  const c = new Client({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_URL?.includes('supabase.co') ? { rejectUnauthorized: false } : undefined,
-  });
-  await c.connect();
+  const c = await getDbClient();
   try {
     try {
       const r = await c.query(`
@@ -25,7 +21,10 @@ export async function GET() {
       if (msg.includes('does not exist')) {
         try {
           const r2 = await c.query(`select id, email, raw_user_meta_data->>'full_name' as full_name, coalesce(raw_user_meta_data->>'role','runner') as role, created_at from auth.users order by created_at desc`);
-          return NextResponse.json({ users: r2.rows.map((u:any)=>({ ...u, route_count: 0 })), warning: 'profiles fallback to auth.users' });
+          return NextResponse.json({
+            users: r2.rows.map((u: Record<string, unknown>) => ({ ...u, route_count: 0 })),
+            warning: 'profiles fallback to auth.users',
+          });
         } catch {}
       }
       return NextResponse.json({ users: [], warning: msg });

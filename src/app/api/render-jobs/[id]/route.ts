@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Client } from 'pg';
+import { getDbClient } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,13 +23,10 @@ export async function GET(
     });
   }
 
-  const client = new Client({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_URL?.includes('supabase.co') ? { rejectUnauthorized: false } : undefined,
-  });
+  
 
+  const client = await getDbClient();
   try {
-    await client.connect();
     const res = await client.query(
       `select id, route_id, status, params, output_url, error_message, created_at, updated_at
        from public.render_jobs where id = $1`,

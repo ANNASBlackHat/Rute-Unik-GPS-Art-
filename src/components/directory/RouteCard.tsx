@@ -3,6 +3,7 @@ import { Link } from '@/i18n/routing';
 import { Card } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { useTranslations, useLocale } from 'next-intl';
+import { Download } from 'lucide-react';
 import { ElevationSparkline } from './ElevationSparkline';
 import { type ShapeCategory } from '@/lib/shape-category';
 
@@ -18,6 +19,9 @@ export interface RouteItem {
   shape_category?: ShapeCategory;
   elevation_points?: number[];
   download_count?: number;
+  view_count?: number;
+  share_count?: number;
+  start_count?: number;
   created_at?: string;
 }
 
@@ -92,6 +96,16 @@ export function RouteCard({ route }: RouteCardProps) {
               {t('distance')}
             </span>
             <span className="font-bold">{distanceKm} km</span>
+          </div>
+
+          <div className="text-center">
+            <span className="text-ink/70 text-[11px] block uppercase tracking-wider">
+              {t('downloads')}
+            </span>
+            <span className="font-bold inline-flex items-center gap-1">
+              <Download size={11} strokeWidth={2.5} className="text-forest-moss" aria-hidden="true" />
+              {route.download_count ?? 0}
+            </span>
           </div>
 
           <div className="text-right">

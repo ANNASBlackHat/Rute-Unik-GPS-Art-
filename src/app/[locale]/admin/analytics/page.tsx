@@ -2,7 +2,7 @@ import React from 'react';
 import { setRequestLocale } from 'next-intl/server';
 import { getAuthUser } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
-import { Client } from 'pg';
+import { getDbClient } from '@/lib/db';
 import { Card } from '@/components/ui/Card';
 
 export default async function AdminAnalyticsPage({ params }: { params: Promise<{ locale: string }> }) {
@@ -11,12 +11,20 @@ export default async function AdminAnalyticsPage({ params }: { params: Promise<{
   const { user } = await getAuthUser();
   if (!user || user.role !== 'admin') redirect(`/${locale}/admin`);
 
-  const c = new Client({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_URL?.includes('supabase.co') ? { rejectUnauthorized: false } : undefined,
-  });
-  await c.connect();
-  let rows: any[] = [];
+  interface AnalyticsRow {
+    id: string;
+    name: string;
+    city_name: string | null;
+    status: string;
+    view_count: number;
+    share_count: number;
+    download_count: number;
+    start_count: number;
+    score: number;
+  }
+
+  const c = await getDbClient();
+  let rows: AnalyticsRow[] = [];
   try {
     const r = await c.query(`
       select r.id, r.name, c.name as city_name, r.status,

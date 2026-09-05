@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import { Client } from 'pg';
+import { getDbClient } from '@/lib/db';
 import { encodeFallbackUser } from '@/lib/auth-fallback';
 
 export async function POST(request: NextRequest) {
@@ -58,11 +58,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Direct DB fallback (emergency) - verify via pg crypt and issue signed fallback session
-    const client = new Client({
-      connectionString: process.env.DATABASE_URL,
-      ssl: process.env.DATABASE_URL?.includes('supabase.co') ? { rejectUnauthorized: false } : undefined,
-    });
-    await client.connect();
+    const client = await getDbClient();
     try {
       const res = await client.query(
         `

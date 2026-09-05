@@ -1,6 +1,6 @@
 import React from 'react';
 import { setRequestLocale } from 'next-intl/server';
-import { Client } from 'pg';
+import { getDbClient } from '@/lib/db';
 import { CityManager, AdminCityItem } from '@/components/admin/CityManager';
 
 export const dynamic = 'force-dynamic';
@@ -13,16 +13,11 @@ export default async function AdminCitiesPage({
   const { locale } = await params;
   setRequestLocale(locale);
 
-  const client = new Client({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.DATABASE_URL?.includes('supabase.co')
-      ? { rejectUnauthorized: false }
-      : undefined,
-  });
+  
 
   let cities: AdminCityItem[] = [];
+  const client = await getDbClient();
   try {
-    await client.connect();
     const query = `
       select 
         c.id, 

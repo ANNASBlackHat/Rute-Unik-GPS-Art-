@@ -24,6 +24,7 @@
     "community": "KOMUNITAS",
     "distance": "JARAK",
     "elevation": "ELEVASI",
+    "downloads": "UNDUHAN",
     "viewRoute": "LIHAT RUTE",
     "routesCount": "Rute",
     "noRoutesFound": "Tidak ada rute yang cocok dengan filter",
@@ -200,5 +201,9 @@
   "languages": {
     "id": "Bahasa Indonesia",
     "en": "English"
+  },
+  "cities": {
+    "title": "Rute Lari GPS-Art di {city}",
+    "description": "{count} rute lari GPS-art di {city} - jelajahi peta, jarak, dan elevasi, lalu unduh GPX untuk larimu sendiri."
   }
 }
