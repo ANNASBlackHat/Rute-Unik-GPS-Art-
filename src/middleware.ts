@@ -28,6 +28,12 @@ export default async function middleware(request: NextRequest) {
   // 1. Run i18n middleware
   let response = intlMiddleware(request);
 
+  // If next-intl generated a redirect (e.g. '/' -> '/id' or '/en'), return immediately.
+  // The destination locale page will handle session refresh on the followed request.
+  if (response.headers.has('location') || (response.status >= 300 && response.status < 400)) {
+    return response;
+  }
+
   // 2. Check if the target route requires authentication or admin privileges
   const match = pathname.match(/^\/(id|en)/);
   const locale = match ? match[1] : 'id';
