@@ -1,13 +1,72 @@
 import React from 'react';
 import { notFound } from 'next/navigation';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
-import { supabase } from '@/lib/supabase';
+import type { Metadata } from 'next';
+import { getRoute } from '@/lib/route-data';
 import { RouteViewerSection } from '@/components/map/RouteViewerSection';
 import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
 import { Link } from '@/i18n/routing';
 import { RouteActionsMenu } from '@/components/routes/RouteActionsMenu';
 import { ViewTracker } from '@/components/routes/ShareButton';
+import { localeUrl } from '@/lib/site';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string; id: string }>;
+}): Promise<Metadata> {
+  const { locale, id } = await params;
+  const route = await getRoute(id);
+  if (!route) return {};
+
+  const cityName = route.cities?.name || '';
+  const distanceKm = (Number(route.distance_m) / 1000).toLocaleString(
+    locale === 'id' ? 'id-ID' : 'en-US',
+    { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+  );
+  const elevation = route.elevation_gain_m
+    ? `+${Math.round(route.elevation_gain_m)} m`
+    : '';
+
+  const path = `/routes/${route.id}`;
+  const canonicalUrl = localeUrl(locale, path);
+  const languages = {
+    id: localeUrl('id', path),
+    en: localeUrl('en', path),
+    'x-default': localeUrl('id', path),
+  };
+
+  const cityPart = cityName ? `, ${cityName}` : '';
+  const title = `${route.name}${cityPart} — GPS-Art Running Route`;
+  const description = route.gpx_raw
+    ? `GPS-art running route "${route.name}"${cityPart} — ${distanceKm} km${elevation ? `, elevation ${elevation}` : ''}. Browse the map, elevation profile, and download the GPX to run it yourself.`
+    : title;
+
+  const robots =
+    route.status === 'pending' || route.status === 'rejected'
+      ? { index: false, follow: false }
+      : undefined;
+
+  return {
+    title,
+    description,
+    alternates: {
+      canonical: canonicalUrl,
+      languages,
+    },
+    robots,
+    openGraph: {
+      title,
+      description,
+      url: canonicalUrl,
+    },
+    twitter: {
+      title,
+      description,
+    },
+  };
+}
 
 export default async function RouteDetailPage({
   params,
@@ -19,85 +78,14 @@ export default async function RouteDetailPage({
   const t = await getTranslations('routeDetail');
   const tHome = await getTranslations('home');
 
-  // Fetch route data — try Supabase first, fallback to direct PG if Supabase unreachable (e.g. ENETUNREACH on remote)
-  let route: {
-    id: string;
-    name: string;
-    city_id: string;
-    distance_m: number;
-    elevation_gain_m: number | null;
-    status: string;
-    gpx_raw: string;
-    thumbnail_svg: string;
-    cities: { id: string; name: string; country: string } | null;
-  } | null = null;
-
-  try {
-    const { data, error } = await supabase
-      .from('routes')
-      .select(
-        `
-      id,
-      name,
-      city_id,
-      distance_m,
-      elevation_gain_m,
-      status,
-      gpx_raw,
-      thumbnail_svg,
-      cities (
-        id,
-        name,
-        country
-      )
-    `,
-      )
-      .eq('id', id)
-      .single();
-    if (!error && data) route = data as unknown as NonNullable<typeof route>;
-  } catch {
-    // ignore, will fallback to PG
-  }
+  const route = await getRoute(id);
 
   if (!route) {
-    // Fallback to direct PG (local postgis) — keeps dev working when Supabase network is down
-    try {
-      const { Client } = await import('pg');
-      const client = new Client({
-        connectionString: process.env.DATABASE_URL,
-        ssl: process.env.DATABASE_URL?.includes('supabase.co') ? { rejectUnauthorized: false } : undefined,
-      });
-      await client.connect();
-      try {
-        const res = await client.query(
-          `select r.id, r.name, r.city_id, r.distance_m, r.elevation_gain_m, r.status, r.gpx_raw, r.thumbnail_svg,
-                  c.id as city_id2, c.name as city_name, c.country as city_country
-           from public.routes r left join public.cities c on c.id = r.city_id where r.id = $1 limit 1`,
-          [id],
-        );
-        if (res.rows.length > 0) {
-          const row = res.rows[0];
-          route = {
-            id: row.id,
-            name: row.name,
-            city_id: row.city_id,
-            distance_m: Number(row.distance_m),
-            elevation_gain_m: row.elevation_gain_m ? Number(row.elevation_gain_m) : null,
-            status: row.status,
-            gpx_raw: row.gpx_raw,
-            thumbnail_svg: row.thumbnail_svg,
-            cities: row.city_name ? { id: row.city_id2, name: row.city_name, country: row.city_country } : null,
-          };
-        }
-      } finally {
-        await client.end().catch(() => {});
-      }
-    } catch {
-      // ignore
-    }
+    notFound();
   }
 
-  if (!route) {
+  // Rejected routes are hidden from search and public discovery entirely.
+  if (route.status === 'rejected') {
     notFound();
   }
 
@@ -130,42 +118,94 @@ export default async function RouteDetailPage({
   const mins = estMinutes % 60;
   const timeFormatted =
     locale === 'id'
-      ? (hours > 0 ? `${hours}j ${mins}m` : `${mins}m`)
-      : (hours > 0 ? `${hours}h ${mins}m` : `${mins}m`);
+      ? hours > 0
+        ? `${hours}j ${mins}m`
+        : `${mins}m`
+      : hours > 0
+        ? `${hours}h ${mins}m`
+        : `${mins}m`;
 
   return (
     <div className="space-y-8 pb-16">
       <ViewTracker routeId={route.id} />
+
+      {/* Structured data: route as a CreativeWork + breadcrumb trail */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify([
+            {
+              '@context': 'https://schema.org',
+              '@type': 'CreativeWork',
+              name: route.name,
+              description: cityName
+                ? `GPS-art running route ${route.name} in ${cityName}${countryName ? `, ${countryName}` : ''}.`
+                : `GPS-art running route ${route.name}.`,
+              url: localeUrl(locale, `/routes/${route.id}`),
+              image: localeUrl(locale, `/routes/${route.id}/opengraph-image`),
+              isAccessibleForFree: true,
+            },
+            {
+              '@context': 'https://schema.org',
+              '@type': 'BreadcrumbList',
+              itemListElement: [
+                {
+                  '@type': 'ListItem',
+                  position: 1,
+                  name: 'Rute Unik',
+                  item: localeUrl(locale, '/'),
+                },
+                {
+                  '@type': 'ListItem',
+                  position: 2,
+                  name: cityName || 'Routes',
+                  item: localeUrl(locale, '/'),
+                },
+                {
+                  '@type': 'ListItem',
+                  position: 3,
+                  name: route.name,
+                  item: localeUrl(locale, `/routes/${route.id}`),
+                },
+              ],
+            },
+          ]),
+        }}
+      />
+
       {/* Back Navigation Bar */}
       <div className="flex items-center justify-between">
         <Link
           href="/"
-          className="inline-flex items-center gap-1 font-display text-xs uppercase tracking-wider text-ink/70 hover:text-ink transition-colors"
+          className="font-display text-ink/70 hover:text-ink inline-flex items-center gap-1 text-xs tracking-wider uppercase transition-colors"
         >
           ← {t('backToDirectory')}
         </Link>
 
-        <Badge variant={route.status as 'official' | 'community' | 'pending' | 'rejected'}>
-          {route.status === 'official'
-            ? tHome('official')
-            : tHome('community')}
+        <Badge
+          variant={
+            route.status as 'official' | 'community' | 'pending' | 'rejected'
+          }
+        >
+          {route.status === 'official' ? tHome('official') : tHome('community')}
         </Badge>
       </div>
 
       {/* Header Info */}
       <div className="space-y-1">
-        <span className="font-data text-xs text-ink/60 uppercase tracking-wider font-semibold">
-          {cityName}{countryName ? `, ${countryName}` : ''}
+        <span className="font-data text-ink/60 text-xs font-semibold tracking-wider uppercase">
+          {cityName}
+          {countryName ? `, ${countryName}` : ''}
         </span>
-        <h1 className="font-display text-3xl sm:text-4xl text-ink uppercase tracking-tight">
+        <h1 className="font-display text-ink text-3xl tracking-tight uppercase sm:text-4xl">
           {route.name}
         </h1>
       </div>
 
       {/* Main Content Grid: Map + Stats */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
         {/* Left 2 Cols: Interactive Route Map & Elevation Profile with Synchronized Playback */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="space-y-6 lg:col-span-2">
           <RouteViewerSection
             coordinates={coordinates}
             gpxRaw={route.gpx_raw}
@@ -177,57 +217,55 @@ export default async function RouteDetailPage({
         <div className="space-y-6">
           {/* GPX Artwork Preview Box (Prominent preview above stats) */}
           <Card className="space-y-3">
-            <h3 className="font-display text-xs uppercase tracking-wider text-ink/70">
+            <h3 className="font-display text-ink/70 text-xs tracking-wider uppercase">
               {t('shapePreview')}
             </h3>
-            <div className="w-full aspect-square bg-paper/60 rounded-[8px] p-6 border border-contour-tan/50 flex items-center justify-center">
+            <div className="bg-paper/60 border-contour-tan/50 flex aspect-square w-full items-center justify-center rounded-[8px] border p-6">
               <div
-                className="w-full h-full flex items-center justify-center [&>svg]:w-full [&>svg]:h-full [&>svg]:max-h-full [&>svg]:stroke-ink"
+                className="[&>svg]:stroke-ink flex h-full w-full items-center justify-center [&>svg]:h-full [&>svg]:max-h-full [&>svg]:w-full"
                 dangerouslySetInnerHTML={{ __html: route.thumbnail_svg }}
               />
             </div>
           </Card>
 
           <Card className="space-y-6">
-            <h2 className="font-display text-sm uppercase tracking-wider text-ink border-b border-contour-tan pb-2">
+            <h2 className="font-display text-ink border-contour-tan border-b pb-2 text-sm tracking-wider uppercase">
               {t('routeStats')}
             </h2>
 
-            <div className="grid grid-cols-2 gap-4 font-data">
-              <div className="bg-paper/40 p-3 rounded-[6px] border border-contour-tan/50">
-                <span className="text-[11px] text-ink/70 block uppercase tracking-wider">
+            <div className="font-data grid grid-cols-2 gap-4">
+              <div className="bg-paper/40 border-contour-tan/50 rounded-[6px] border p-3">
+                <span className="text-ink/70 block text-[11px] tracking-wider uppercase">
                   {tHome('distance')}
                 </span>
-                <span className="font-display text-xl text-ink">
+                <span className="font-display text-ink text-xl">
                   {distanceKm}
                 </span>
-                <span className="text-xs text-ink/70 ml-1">km</span>
+                <span className="text-ink/70 ml-1 text-xs">km</span>
               </div>
 
-              <div className="bg-paper/40 p-3 rounded-[6px] border border-contour-tan/50">
-                <span className="text-[11px] text-ink/70 block uppercase tracking-wider">
+              <div className="bg-paper/40 border-contour-tan/50 rounded-[6px] border p-3">
+                <span className="text-ink/70 block text-[11px] tracking-wider uppercase">
                   {tHome('elevation')}
                 </span>
-                <span className="font-display text-xl text-ink">
+                <span className="font-display text-ink text-xl">
                   {elevation}
                 </span>
               </div>
 
-              <div className="bg-paper/40 p-3 rounded-[6px] border border-contour-tan/50">
-                <span className="text-[11px] text-ink/70 block uppercase tracking-wider">
+              <div className="bg-paper/40 border-contour-tan/50 rounded-[6px] border p-3">
+                <span className="text-ink/70 block text-[11px] tracking-wider uppercase">
                   {t('estPace')}
                 </span>
-                <span className="font-display text-xl text-ink">
-                  05:30
-                </span>
-                <span className="text-xs text-ink/70 ml-1">/km</span>
+                <span className="font-display text-ink text-xl">05:30</span>
+                <span className="text-ink/70 ml-1 text-xs">/km</span>
               </div>
 
-              <div className="bg-paper/40 p-3 rounded-[6px] border border-contour-tan/50">
-                <span className="text-[11px] text-ink/70 block uppercase tracking-wider">
+              <div className="bg-paper/40 border-contour-tan/50 rounded-[6px] border p-3">
+                <span className="text-ink/70 block text-[11px] tracking-wider uppercase">
                   {t('estDuration')}
                 </span>
-                <span className="font-display text-xl text-ink">
+                <span className="font-display text-ink text-xl">
                   ~{timeFormatted}
                 </span>
               </div>

@@ -11,7 +11,9 @@
     "logout": "Keluar",
     "menu": "Menu",
     "closeMenu": "Tutup Menu",
-    "footerNote": "Didesain dengan estetika peta topografi & penanda jalur."
+    "footerNote": "Didesain dengan estetika peta topografi & penanda jalur.",
+    "metaTitle": "Direktori Rute Lari GPS-Art",
+    "metaDescription": "Temukan rute lari unik di mana lintasan GPS membentuk pola, hewan, dan simbol di jalanan kota."
   },
   "home": {
     "title": "UBAH LARIMU MENJADI SENI",
@@ -61,7 +63,8 @@
     "downloadGpx": "Unduh GPX",
     "startRun": "Mulai Lari",
     "shapePreview": "Pratinjau Bentuk Rute",
-    "exportVideo": "Ekspor Video"
+    "exportVideo": "Ekspor Video",
+    "metaKeywords": "GPS art, rute lari, lari seni, GPS art running, rute unik, olahraga lari"
   },
   "runMode": {
     "warningTitle": "Pemberitahuan Mode Lari Peramban",

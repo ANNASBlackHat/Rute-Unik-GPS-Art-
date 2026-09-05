@@ -1,9 +1,42 @@
 import React from 'react';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
+import type { Metadata } from 'next';
 import { supabase } from '@/lib/supabase';
 import { RouteGrid } from '@/components/directory/RouteGrid';
+import { localeUrl } from '@/lib/site';
 
 export const revalidate = 60;
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const tHome = await getTranslations('home');
+  const tCommon = await getTranslations('common');
+
+  const homeUrl = localeUrl(locale, '/');
+  const languages = {
+    id: localeUrl('id', '/'),
+    en: localeUrl('en', '/'),
+    'x-default': localeUrl('id', '/'),
+  };
+
+  return {
+    title: `${tHome('title')}`,
+    description: tHome('subtitle'),
+    alternates: {
+      canonical: homeUrl,
+      languages,
+    },
+    openGraph: {
+      title: `${tCommon('appName')} — ${tHome('title')}`,
+      description: tHome('subtitle'),
+      url: homeUrl,
+    },
+  };
+}
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
@@ -29,7 +62,8 @@ export default async function HomePage({
     supabase.from('cities').select('id, name, country').order('name'),
     supabase
       .from('routes')
-      .select(`
+      .select(
+        `
         id,
         name,
         city_id,
@@ -42,8 +76,9 @@ export default async function HomePage({
         cities (
           name
         )
-      `)
-      .neq('status', 'rejected')
+      `
+      )
+      .in('status', ['official', 'community'])
       .order('created_at', { ascending: false }),
   ]);
 
@@ -85,7 +120,11 @@ export default async function HomePage({
   }));
 
   // Sort: official/community first (by newest), pending at bottom (unverified)
-  const statusOrder: Record<string, number> = { official: 0, community: 1, pending: 2 };
+  const statusOrder: Record<string, number> = {
+    official: 0,
+    community: 1,
+    pending: 2,
+  };
   const routes: RouteItem[] = [...rawRoutes].sort((a, b) => {
     const ao = statusOrder[a.status] ?? 2;
     const bo = statusOrder[b.status] ?? 2;
@@ -94,94 +133,127 @@ export default async function HomePage({
 
   return (
     <div className="space-y-12 pb-16">
+      {/* Structured data: website */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'WebSite',
+            name: 'Rute Unik',
+            url: localeUrl(locale, '/'),
+            description: t('subtitle'),
+            inLanguage: locale,
+          }),
+        }}
+      />
+
       {/* Hero Section */}
-      <section className="text-center max-w-2xl mx-auto space-y-4 pt-4">
-        <div className="inline-block px-3 py-1 bg-chalk border border-contour-tan rounded-[4px]">
-          <span className="font-data text-[11px] uppercase tracking-wider text-moss font-bold">
+      <section className="mx-auto max-w-2xl space-y-4 pt-4 text-center">
+        <div className="bg-chalk border-contour-tan inline-block rounded-[4px] border px-3 py-1">
+          <span className="font-data text-moss text-[11px] font-bold tracking-wider uppercase">
             {tCommon('tagline')}
           </span>
         </div>
 
-        <h1 className="font-display text-3xl sm:text-4xl tracking-tight text-ink uppercase leading-tight">
+        <h1 className="font-display text-ink text-3xl leading-tight tracking-tight uppercase sm:text-4xl">
           {t('title')}
         </h1>
-        <p className="text-base text-ink/80 font-body leading-relaxed">
+        <p className="text-ink/80 font-body text-base leading-relaxed">
           {t('subtitle')}
         </p>
       </section>
 
       {/* Directory & Catalog Grid */}
       <section className="space-y-4">
-        <React.Suspense fallback={<div className="p-12 text-center text-xs font-data text-ink/50 uppercase tracking-wider">Loading Directory...</div>}>
+        <React.Suspense
+          fallback={
+            <div className="font-data text-ink/50 p-12 text-center text-xs tracking-wider uppercase">
+              Loading Directory...
+            </div>
+          }
+        >
           <RouteGrid initialRoutes={routes} cities={cities} />
         </React.Suspense>
       </section>
 
       {/* Design System Tokens — dev only (hidden in production) */}
       {process.env.NODE_ENV !== 'production' && (
-        <section className="space-y-6 pt-10 border-t border-contour-tan">
-          <h2 className="font-display text-xl uppercase tracking-tight text-ink">
+        <section className="border-contour-tan space-y-6 border-t pt-10">
+          <h2 className="font-display text-ink text-xl tracking-tight uppercase">
             {tTokens('title')}
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <Card className="space-y-4">
-              <h3 className="font-display text-sm uppercase text-ink">
+              <h3 className="font-display text-ink text-sm uppercase">
                 {tTokens('paletteTitle')}
               </h3>
-              <div className="space-y-2 font-data text-xs">
-                <div className="flex items-center gap-3 p-2 bg-[#EDE8DC] border border-contour-tan rounded-[4px]">
-                  <div className="w-6 h-6 rounded bg-[#EDE8DC] border border-ink/20 shrink-0" />
+              <div className="font-data space-y-2 text-xs">
+                <div className="border-contour-tan flex items-center gap-3 rounded-[4px] border bg-[#EDE8DC] p-2">
+                  <div className="border-ink/20 h-6 w-6 shrink-0 rounded border bg-[#EDE8DC]" />
                   <span className="text-ink">{tTokens('colorPaper')}</span>
                 </div>
-                <div className="flex items-center gap-3 p-2 bg-[#F7F5EF] border border-contour-tan rounded-[4px]">
-                  <div className="w-6 h-6 rounded bg-[#1F2A1E] shrink-0" />
+                <div className="border-contour-tan flex items-center gap-3 rounded-[4px] border bg-[#F7F5EF] p-2">
+                  <div className="h-6 w-6 shrink-0 rounded bg-[#1F2A1E]" />
                   <span className="text-ink">{tTokens('colorInk')}</span>
                 </div>
-                <div className="flex items-center gap-3 p-2 bg-[#F7F5EF] border border-contour-tan rounded-[4px]">
-                  <div className="w-6 h-6 rounded bg-[#B83214] shrink-0" />
-                  <span className="text-ink">{tTokens('colorTrailOrange')}</span>
+                <div className="border-contour-tan flex items-center gap-3 rounded-[4px] border bg-[#F7F5EF] p-2">
+                  <div className="h-6 w-6 shrink-0 rounded bg-[#B83214]" />
+                  <span className="text-ink">
+                    {tTokens('colorTrailOrange')}
+                  </span>
                 </div>
-                <div className="flex items-center gap-3 p-2 bg-[#F7F5EF] border border-contour-tan rounded-[4px]">
-                  <div className="w-6 h-6 rounded bg-[#5C6E4F] shrink-0" />
+                <div className="border-contour-tan flex items-center gap-3 rounded-[4px] border bg-[#F7F5EF] p-2">
+                  <div className="h-6 w-6 shrink-0 rounded bg-[#5C6E4F]" />
                   <span className="text-ink">{tTokens('colorMoss')}</span>
                 </div>
-                <div className="flex items-center gap-3 p-2 bg-[#F7F5EF] border border-contour-tan rounded-[4px]">
-                  <div className="w-6 h-6 rounded bg-[#C9BFA6] shrink-0" />
+                <div className="border-contour-tan flex items-center gap-3 rounded-[4px] border bg-[#F7F5EF] p-2">
+                  <div className="h-6 w-6 shrink-0 rounded bg-[#C9BFA6]" />
                   <span className="text-ink">{tTokens('colorContourTan')}</span>
                 </div>
-                <div className="flex items-center gap-3 p-2 bg-[#F7F5EF] border border-contour-tan rounded-[4px]">
-                  <div className="w-6 h-6 rounded bg-[#F7F5EF] border border-contour-tan shrink-0" />
+                <div className="border-contour-tan flex items-center gap-3 rounded-[4px] border bg-[#F7F5EF] p-2">
+                  <div className="border-contour-tan h-6 w-6 shrink-0 rounded border bg-[#F7F5EF]" />
                   <span className="text-ink">{tTokens('colorChalk')}</span>
                 </div>
               </div>
             </Card>
 
             <Card className="space-y-4">
-              <h3 className="font-display text-sm uppercase text-ink">
+              <h3 className="font-display text-ink text-sm uppercase">
                 {tTokens('typographyTitle')}
               </h3>
               <div className="space-y-3">
                 <div>
-                  <span className="text-xs font-data text-ink/70 uppercase block">
+                  <span className="font-data text-ink/70 block text-xs uppercase">
                     Display (Archivo Black)
                   </span>
-                  <p className="font-display text-lg uppercase">RUTE UNIK GPS ART</p>
+                  <p className="font-display text-lg uppercase">
+                    RUTE UNIK GPS ART
+                  </p>
                 </div>
                 <div>
-                  <span className="text-xs font-data text-ink/70 uppercase block">
+                  <span className="font-data text-ink/70 block text-xs uppercase">
                     Data (JetBrains Mono)
                   </span>
-                  <p className="font-data text-xs font-bold text-ink">{tTokens('sampleMetric')}</p>
+                  <p className="font-data text-ink text-xs font-bold">
+                    {tTokens('sampleMetric')}
+                  </p>
                 </div>
                 <div>
-                  <span className="text-xs font-data text-ink/70 uppercase block">Body (Inter)</span>
-                  <p className="font-body text-sm text-ink">Flat paper surfaces, hairline borders, single orange accent.</p>
+                  <span className="font-data text-ink/70 block text-xs uppercase">
+                    Body (Inter)
+                  </span>
+                  <p className="font-body text-ink text-sm">
+                    Flat paper surfaces, hairline borders, single orange accent.
+                  </p>
                 </div>
 
-                <div className="pt-2 border-t border-contour-tan space-y-2">
-                  <span className="text-xs font-data text-ink/70 uppercase block">{tTokens('componentsTitle')}</span>
-                  <div className="flex flex-wrap gap-2 items-center">
+                <div className="border-contour-tan space-y-2 border-t pt-2">
+                  <span className="font-data text-ink/70 block text-xs uppercase">
+                    {tTokens('componentsTitle')}
+                  </span>
+                  <div className="flex flex-wrap items-center gap-2">
                     <Button variant="primary">Primary CTA</Button>
                     <Button variant="secondary">Secondary Button</Button>
                     <Badge variant="official">Official</Badge>

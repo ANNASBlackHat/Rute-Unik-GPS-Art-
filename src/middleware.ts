@@ -18,7 +18,10 @@ export default async function middleware(request: NextRequest) {
   // Bypass i18n for auth callback (must stay at /auth/callback, not /id/auth/callback)
   if (pathname.startsWith('/auth/') || pathname === '/auth') {
     const response = NextResponse.next();
-    const { response: supabaseResponse } = await updateSession(request, response);
+    const { response: supabaseResponse } = await updateSession(
+      request,
+      response
+    );
     return supabaseResponse;
   }
 
@@ -30,10 +33,14 @@ export default async function middleware(request: NextRequest) {
   const locale = match ? match[1] : 'id';
 
   const isAdminRoute = /^\/(id|en)\/admin(\/.*)?$/.test(pathname);
-  const isProtected = /^\/(id|en)\/(upload|me)(\/.*)?$/.test(pathname) || isAdminRoute;
+  const isProtected =
+    /^\/(id|en)\/(upload|me)(\/.*)?$/.test(pathname) || isAdminRoute;
 
   if (isProtected) {
-    const { user, response: supabaseResponse } = await updateSession(request, response);
+    const { user, response: supabaseResponse } = await updateSession(
+      request,
+      response
+    );
     response = supabaseResponse;
 
     if (!user) {
@@ -48,7 +55,10 @@ export default async function middleware(request: NextRequest) {
     }
   } else {
     // Still refresh session on non-protected routes so cookies stay fresh
-    const { response: supabaseResponse } = await updateSession(request, response);
+    const { response: supabaseResponse } = await updateSession(
+      request,
+      response
+    );
     response = supabaseResponse;
   }
 
@@ -57,5 +67,5 @@ export default async function middleware(request: NextRequest) {
 
 export const config = {
   // Match only internationalized pathnames, excluding api, auth and static files
-  matcher: ['/((?!api|auth|_next|_vercel|.*\\..*).*)'],
+  matcher: ['/((?!api|auth|_next|_vercel|icon|apple-icon|.*\\..*).*)'],
 };

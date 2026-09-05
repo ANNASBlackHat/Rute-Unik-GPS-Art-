@@ -11,7 +11,9 @@
     "logout": "Logout",
     "menu": "Menu",
     "closeMenu": "Close Menu",
-    "footerNote": "Designed with topographic & trail-marker aesthetic."
+    "footerNote": "Designed with topographic & trail-marker aesthetic.",
+    "metaTitle": "GPS-Art Running Routes Directory",
+    "metaDescription": "Discover unique running routes where your GPS trace forms shapes, animals, and symbols across city streets."
   },
   "home": {
     "title": "TURN YOUR RUN INTO ART",
@@ -61,7 +63,8 @@
     "downloadGpx": "Download GPX",
     "startRun": "Start Run",
     "shapePreview": "Route Shape Preview",
-    "exportVideo": "Export Video"
+    "exportVideo": "Export Video",
+    "metaKeywords": "GPS art, running routes, GPS art running, route art, running shapes, lari rute"
   },
   "runMode": {
     "warningTitle": "Browser Run Mode Notice",
