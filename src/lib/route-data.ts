@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { getDbClient } from '@/lib/db';
 
 export interface RouteData {
   id: string;
@@ -49,7 +50,6 @@ export async function getRoute(id: string): Promise<RouteData | null> {
   if (!route) {
     // Fallback to direct PG (local postgis) — keeps dev working when Supabase network is down
     try {
-      const { getDbClient } = await import('@/lib/db');
       const client = await getDbClient();
       try {
         const res = await client.query(
