@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
+  RefreshControl,
+  ActivityIndicator,
   Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -14,6 +16,8 @@ import {
   FALLBACK_ROUTES,
   filterRoutes,
   formatDistanceKm,
+  fetchLiveRoutes,
+  fetchLiveCities,
   MobileRouteItem,
 } from '../services/routeService';
 
@@ -22,8 +26,16 @@ export default function DirectoryScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCity, setSelectedCity] = useState('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [routes, setRoutes] = useState<MobileRouteItem[]>(FALLBACK_ROUTES);
+  const [cities, setCities] = useState<string[]>([
+    'all',
+    'Yogyakarta',
+    'Bandung',
+    'Jakarta',
+  ]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const cities = ['all', 'Yogyakarta', 'Bandung', 'Jakarta'];
   const categories = [
     { id: 'all', label: 'Semua' },
     { id: 'animal', label: 'Hewan 🐾' },
@@ -31,13 +43,34 @@ export default function DirectoryScreen() {
     { id: 'symbol', label: 'Simbol ⭐️' },
   ];
 
+  const loadData = useCallback(async (showRefreshing = false) => {
+    if (showRefreshing) setIsRefreshing(true);
+    try {
+      const [liveRoutes, liveCities] = await Promise.all([
+        fetchLiveRoutes(),
+        fetchLiveCities(),
+      ]);
+      setRoutes(liveRoutes);
+      setCities(['all', ...liveCities]);
+    } catch {
+      // Keep existing routes
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
   const filteredRoutes = useMemo(() => {
-    return filterRoutes(FALLBACK_ROUTES, {
+    return filterRoutes(routes, {
       query: searchQuery,
       city: selectedCity,
       shapeCategory: selectedCategory as any,
     });
-  }, [searchQuery, selectedCity, selectedCategory]);
+  }, [routes, searchQuery, selectedCity, selectedCategory]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -122,10 +155,26 @@ export default function DirectoryScreen() {
           style={styles.routeList}
           contentContainerStyle={styles.routeListContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={() => loadData(true)}
+              tintColor="#10b981"
+            />
+          }
         >
-          <Text style={styles.resultsCount}>
-            Menampilkan {filteredRoutes.length} rute GPS Art
-          </Text>
+          {isLoading && !isRefreshing ? (
+            <View style={{ paddingVertical: 40, alignItems: 'center' }}>
+              <ActivityIndicator size="large" color="#10b981" />
+              <Text style={{ color: '#9ca3af', marginTop: 12, fontSize: 13 }}>
+                Memuat rute dari database...
+              </Text>
+            </View>
+          ) : (
+            <Text style={styles.resultsCount}>
+              Menampilkan {filteredRoutes.length} rute GPS Art
+            </Text>
+          )}
 
           {filteredRoutes.map((route: MobileRouteItem) => (
             <TouchableOpacity

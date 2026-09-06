@@ -14,6 +14,8 @@ import {
   formatDistanceKm,
   formatRunDuration,
   getRouteDetailWithCoordinates,
+  fetchLiveRouteDetail,
+  MobileRouteDetail,
 } from '../../services/routeService';
 import {
   RunSessionController,
@@ -33,10 +35,26 @@ export default function RunModeScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
 
-  const route = useMemo(
-    () => getRouteDetailWithCoordinates(id ?? 'kucing-ugm'),
-    [id]
+  const [route, setRoute] = useState<MobileRouteDetail>(() =>
+    getRouteDetailWithCoordinates(id ?? 'kucing-ugm')
   );
+
+  useEffect(() => {
+    if (!id) return;
+    let isMounted = true;
+    async function load() {
+      try {
+        const liveDetail = await fetchLiveRouteDetail(id);
+        if (isMounted) {
+          setRoute(liveDetail);
+        }
+      } catch {}
+    }
+    load();
+    return () => {
+      isMounted = false;
+    };
+  }, [id]);
 
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [isPaused, setIsPaused] = useState(false);

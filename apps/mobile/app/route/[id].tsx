@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -6,19 +6,45 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
+  ActivityIndicator,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import {
   FALLBACK_ROUTES,
   formatDistanceKm,
+  fetchLiveRouteDetail,
+  MobileRouteDetail,
+  getRouteDetailWithCoordinates,
 } from '../../services/routeService';
 
 export default function RouteDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
 
-  const route =
-    FALLBACK_ROUTES.find((r) => r.id === id) || FALLBACK_ROUTES[0];
+  const [route, setRoute] = useState<MobileRouteDetail>(() =>
+    getRouteDetailWithCoordinates(id ?? 'kucing-ugm')
+  );
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!id) return;
+    let isMounted = true;
+    async function load() {
+      try {
+        const detail = await fetchLiveRouteDetail(id);
+        if (isMounted) {
+          setRoute(detail);
+          setLoading(false);
+        }
+      } catch {
+        if (isMounted) setLoading(false);
+      }
+    }
+    load();
+    return () => {
+      isMounted = false;
+    };
+  }, [id]);
 
   return (
     <SafeAreaView style={styles.safeArea}>

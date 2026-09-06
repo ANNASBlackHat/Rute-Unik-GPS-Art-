@@ -5,6 +5,7 @@ import {
   ShapeCategory,
   inferShapeCategory,
 } from '@rute-unik/shared';
+import { supabase } from './supabase';
 
 export interface MobileRouteItem {
   id: string;
@@ -198,3 +199,108 @@ export function formatRunDuration(seconds: number): string {
   }
   return `${remMins < 10 ? '0' : ''}${remMins}:${remSecs < 10 ? '0' : ''}${remSecs}`;
 }
+
+/**
+ * Fetches all official & community routes from the Supabase database.
+ * Falls back to FALLBACK_ROUTES if offline or on network failure.
+ */
+export async function fetchLiveRoutes(): Promise<MobileRouteItem[]> {
+  try {
+    const { data, error } = await supabase
+      .from('routes')
+      .select(
+        'id, name, distance_m, elevation_gain_m, status, thumbnail_svg, cities(name)'
+      )
+      .in('status', ['official', 'community'])
+      .order('created_at', { ascending: false });
+
+    if (error || !data || data.length === 0) {
+      return FALLBACK_ROUTES;
+    }
+
+    return data.map((r: any) => {
+      const cityName =
+        (Array.isArray(r.cities) ? r.cities[0]?.name : r.cities?.name) ||
+        'Indonesia';
+      return {
+        id: r.id,
+        name: r.name,
+        city: cityName,
+        distanceMeters: r.distance_m || 5000,
+        elevationGainMeters: r.elevation_gain_m,
+        shapeCategory: inferShapeCategory(r.name),
+        thumbnailSvg: r.thumbnail_svg,
+        status: r.status,
+      };
+    });
+  } catch {
+    return FALLBACK_ROUTES;
+  }
+}
+
+/**
+ * Fetches detailed route information including GPX coordinates and turn cues.
+ */
+export async function fetchLiveRouteDetail(
+  routeId: string
+): Promise<MobileRouteDetail> {
+  try {
+    const { data, error } = await supabase
+      .from('routes')
+      .select(
+        'id, name, distance_m, elevation_gain_m, status, thumbnail_svg, gpx_raw, cities(name)'
+      )
+      .eq('id', routeId)
+      .single();
+
+    if (error || !data) {
+      return getRouteDetailWithCoordinates(routeId);
+    }
+
+    const rawData = data as any;
+    const cityName =
+      (Array.isArray(rawData.cities)
+        ? rawData.cities[0]?.name
+        : rawData.cities?.name) || 'Indonesia';
+
+    const item: MobileRouteItem = {
+      id: rawData.id,
+      name: rawData.name,
+      city: cityName,
+      distanceMeters: rawData.distance_m || 5000,
+      elevationGainMeters: rawData.elevation_gain_m,
+      shapeCategory: inferShapeCategory(rawData.name),
+      thumbnailSvg: rawData.thumbnail_svg,
+      status: rawData.status,
+    };
+
+    if (data.gpx_raw && data.gpx_raw.trim().length > 0) {
+      return processRouteGpx(item, data.gpx_raw);
+    }
+
+    return getRouteDetailWithCoordinates(routeId);
+  } catch {
+    return getRouteDetailWithCoordinates(routeId);
+  }
+}
+
+/**
+ * Fetches available cities with routes from Supabase.
+ */
+export async function fetchLiveCities(): Promise<string[]> {
+  try {
+    const { data, error } = await supabase
+      .from('cities')
+      .select('name')
+      .order('name');
+
+    if (error || !data || data.length === 0) {
+      return ['Yogyakarta', 'Jakarta', 'Bandung'];
+    }
+
+    return data.map((c: any) => c.name);
+  } catch {
+    return ['Yogyakarta', 'Jakarta', 'Bandung'];
+  }
+}
+
