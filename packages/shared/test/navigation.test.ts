@@ -244,6 +244,36 @@ describe('Turn-by-Turn Navigation Engine', () => {
       const finishEvent = resFinish.events.find((e) => e.type === 'route_completed');
       assert.ok(finishEvent, 'Should trigger route_completed event');
       assert.strictEqual(resFinish.completionPercent, 100);
+      assert.strictEqual(resFinish.closestCoordinateIndex, 3);
+    });
+  });
+
+  describe('createRouteProjector (SVG Live Tracking)', () => {
+    it('accurately projects coordinates into SVG viewport space without distortion', () => {
+      const { createRouteProjector } = require('../src/svg-thumbnail');
+      const boxCoords: [number, number][] = [
+        [110.370, -7.770],
+        [110.370, -7.760],
+        [110.380, -7.760],
+        [110.380, -7.770],
+        [110.370, -7.770],
+      ];
+
+      const projector = createRouteProjector(boxCoords, 200, 20);
+      assert.strictEqual(projector.size, 200);
+      assert.strictEqual(projector.viewBox, '0 0 200 200');
+
+      const startSvg = projector.project(boxCoords[0]);
+      // Lon is min, so x should be near padding (left)
+      assert.ok(startSvg[0] >= 19 && startSvg[0] <= 25);
+      // Lat is min (South), so y should be near bottom (since y is inverted)
+      assert.ok(startSvg[1] >= 175 && startSvg[1] <= 185);
+
+      const topMid = projector.project([110.375, -7.760]);
+      // Lon is midway, so x should be around 100
+      assert.strictEqual(Math.round(topMid[0]), 100);
+      // Lat is max (North), so y should be near top (y=20)
+      assert.strictEqual(Math.round(topMid[1]), 20);
     });
   });
 });

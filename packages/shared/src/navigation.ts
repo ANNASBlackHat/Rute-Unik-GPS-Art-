@@ -58,6 +58,7 @@ export interface NavigationStepResult {
   events: NavigationCueEvent[];
   distanceCoveredMeters: number;
   completionPercent: number;
+  closestCoordinateIndex?: number;
   distanceToNextTurnMeters: number | null;
   nextTurnCue: TurnCue | null;
   isOffRoute: boolean;
@@ -480,6 +481,7 @@ export function evaluateNavigationStep(
     events,
     distanceCoveredMeters: coveredMeters,
     completionPercent,
+    closestCoordinateIndex: closestIndex,
     distanceToNextTurnMeters,
     nextTurnCue,
     isOffRoute,

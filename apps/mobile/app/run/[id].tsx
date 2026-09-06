@@ -7,6 +7,7 @@ import {
   SafeAreaView,
   Alert,
   Modal,
+  ScrollView,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import * as Location from 'expo-location';
@@ -30,6 +31,8 @@ import {
   NativeExpoLocationAdapter,
   NativeExpoSpeechEngine,
 } from '../../services/expoAdapters';
+import { LiveRouteTracker } from '../../components/LiveRouteTracker';
+import { RouteShapePreview } from '../../components/RouteShapePreview';
 
 export default function RunModeScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -75,6 +78,10 @@ export default function RunModeScreen() {
   const [isSimulationMode, setIsSimulationMode] = useState(false);
   const [sessionSummary, setSessionSummary] =
     useState<RunSessionSummary | null>(null);
+  const [runnerLocation, setRunnerLocation] = useState<[number, number] | null>(
+    () => route.coordinates?.[0] ?? null
+  );
+  const [closestCoordIndex, setClosestCoordIndex] = useState<number>(0);
 
   const sessionRef = useRef<RunSessionController | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -112,6 +119,10 @@ export default function RunModeScreen() {
       if (!controller) return;
 
       const result = controller.handleLocationUpdate(loc);
+      setRunnerLocation([loc.longitude, loc.latitude]);
+      if (typeof result.closestCoordinateIndex === 'number') {
+        setClosestCoordIndex(result.closestCoordinateIndex);
+      }
       setGpsAccuracy(loc.accuracy);
       setDistanceCoveredMeters(result.distanceCoveredMeters);
       setCurrentPace(
@@ -378,84 +389,102 @@ export default function RunModeScreen() {
           </View>
         </View>
 
-        {/* Turn Guidance Live Card */}
-        <View style={styles.turnCard}>
-          <View style={styles.turnIconBox}>
-            <Text style={styles.turnIconText}>➡️</Text>
-          </View>
-          <View style={styles.turnTextBox}>
-            <Text style={styles.turnDistanceText}>
-              {upcomingTurn.direction} dlm {upcomingTurn.distanceMeters}m
-            </Text>
-            <Text style={styles.turnInstructionText}>
-              {upcomingTurn.instruction}
-            </Text>
-          </View>
-        </View>
-
-        {/* Off-Route Warning (conditionally shown or toggled) */}
-        {isOffRoute && (
-          <View style={styles.offRouteBanner}>
-            <Text style={styles.offRouteIcon}>⚠️</Text>
-            <Text style={styles.offRouteText}>
-              KELUAR DARI JALUR! Putar balik ke arah rute.
-            </Text>
-          </View>
-        )}
-
-        {/* Big HUD Metrics Grid */}
-        <View style={styles.hudGrid}>
-          {/* Timer Card */}
-          <View style={styles.hudCard}>
-            <Text style={styles.hudLabel}>WAKTU</Text>
-            <Text style={styles.hudTimer}>
-              {formatRunDuration(elapsedSeconds)}
-            </Text>
-            <Text style={styles.hudSub}>
-              {isPaused ? 'DIJEDA' : 'BERJALAN'}
-            </Text>
+        {/* Scrollable Center Dashboard */}
+        <ScrollView
+          style={styles.scrollArea}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Turn Guidance Live Card */}
+          <View style={styles.turnCard}>
+            <View style={styles.turnIconBox}>
+              <Text style={styles.turnIconText}>➡️</Text>
+            </View>
+            <View style={styles.turnTextBox}>
+              <Text style={styles.turnDistanceText}>
+                {upcomingTurn.direction} dlm {upcomingTurn.distanceMeters}m
+              </Text>
+              <Text style={styles.turnInstructionText}>
+                {upcomingTurn.instruction}
+              </Text>
+            </View>
           </View>
 
-          {/* Distance Card */}
-          <View style={styles.hudCard}>
-            <Text style={styles.hudLabel}>JARAK</Text>
-            <Text style={styles.hudMetric}>
-              {formatDistanceKm(distanceCoveredMeters)}
-            </Text>
-            <Text style={styles.hudSub}>
-              dari {formatDistanceKm(route.distanceMeters)}
-            </Text>
-          </View>
+          {/* Off-Route Warning (conditionally shown or toggled) */}
+          {isOffRoute && (
+            <View style={styles.offRouteBanner}>
+              <Text style={styles.offRouteIcon}>⚠️</Text>
+              <Text style={styles.offRouteText}>
+                KELUAR DARI JALUR! Putar balik ke arah rute.
+              </Text>
+            </View>
+          )}
 
-          {/* Pace Card */}
-          <View style={styles.hudCard}>
-            <Text style={styles.hudLabel}>PACE RATA-RATA</Text>
-            <Text style={styles.hudMetric}>{currentPace}</Text>
-            <Text style={styles.hudSub}>min / km</Text>
-          </View>
-
-          {/* Completion % Card */}
-          <View style={styles.hudCard}>
-            <Text style={styles.hudLabel}>PROGRES BENTUK</Text>
-            <Text style={styles.hudMetric}>{completionPercent}%</Text>
-            <Text style={styles.hudSub}>{route.shapeCategory.toUpperCase()}</Text>
-          </View>
-        </View>
-
-        {/* Shape Completion Progress Bar */}
-        <View style={styles.progressContainer}>
-          <View style={styles.progressBarBackground}>
-            <View
-              style={[
-                styles.progressBarFill,
-                { width: `${completionPercent}%` },
-              ]}
+          {/* Live GPS Art Shape Canvas & Runner Position Tracker */}
+          <View style={styles.liveTrackerBox}>
+            <LiveRouteTracker
+              routeCoords={route.coordinates}
+              runnerLocation={runnerLocation}
+              closestIndex={closestCoordIndex}
+              size={185}
+              isOffRoute={isOffRoute}
             />
           </View>
-          <Text style={styles.progressLabel}>
-            Penyelesaian Bentuk GPS Art: {completionPercent}%
-          </Text>
-        </View>
+
+          {/* Big HUD Metrics Grid */}
+          <View style={styles.hudGrid}>
+            {/* Timer Card */}
+            <View style={styles.hudCard}>
+              <Text style={styles.hudLabel}>WAKTU</Text>
+              <Text style={styles.hudTimer}>
+                {formatRunDuration(elapsedSeconds)}
+              </Text>
+              <Text style={styles.hudSub}>
+                {isPaused ? 'DIJEDA' : 'BERJALAN'}
+              </Text>
+            </View>
+
+            {/* Distance Card */}
+            <View style={styles.hudCard}>
+              <Text style={styles.hudLabel}>JARAK</Text>
+              <Text style={styles.hudMetric}>
+                {formatDistanceKm(distanceCoveredMeters)}
+              </Text>
+              <Text style={styles.hudSub}>
+                dari {formatDistanceKm(route.distanceMeters)}
+              </Text>
+            </View>
+
+            {/* Pace Card */}
+            <View style={styles.hudCard}>
+              <Text style={styles.hudLabel}>PACE RATA-RATA</Text>
+              <Text style={styles.hudMetric}>{currentPace}</Text>
+              <Text style={styles.hudSub}>min / km</Text>
+            </View>
+
+            {/* Completion % Card */}
+            <View style={styles.hudCard}>
+              <Text style={styles.hudLabel}>PROGRES BENTUK</Text>
+              <Text style={styles.hudMetric}>{completionPercent}%</Text>
+              <Text style={styles.hudSub}>{route.shapeCategory.toUpperCase()}</Text>
+            </View>
+          </View>
+
+          {/* Shape Completion Progress Bar */}
+          <View style={styles.progressContainer}>
+            <View style={styles.progressBarBackground}>
+              <View
+                style={[
+                  styles.progressBarFill,
+                  { width: `${completionPercent}%` },
+                ]}
+              />
+            </View>
+            <Text style={styles.progressLabel}>
+              Penyelesaian Bentuk GPS Art: {completionPercent}%
+            </Text>
+          </View>
+        </ScrollView>
 
         {/* Bottom Control Buttons */}
         <View style={styles.bottomControls}>
@@ -490,6 +519,18 @@ export default function RunModeScreen() {
               <Text style={styles.modalSubtitle}>
                 Anda berhasil menyelesaikan bentuk GPS Art &quot;{route.name}&quot;!
               </Text>
+
+              {/* Finished GPS Art Artwork Trophy Badge */}
+              <View style={styles.modalArtworkBox}>
+                <RouteShapePreview
+                  svgXml={route.thumbnailSvg}
+                  coordinates={route.coordinates}
+                  strokeColor="#34d399"
+                  strokeWidth={4}
+                  size={150}
+                  showEndpoints={true}
+                />
+              </View>
 
               <View style={styles.modalStats}>
                 <View style={styles.modalStatItem}>
@@ -834,5 +875,36 @@ const styles = StyleSheet.create({
     color: '#062817',
     fontWeight: '800',
     fontSize: 14,
+  },
+  liveTrackerBox: {
+    backgroundColor: '#0a110c',
+    borderColor: '#19281e',
+    borderWidth: 1,
+    borderRadius: 18,
+    height: 205,
+    marginVertical: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  modalArtworkBox: {
+    backgroundColor: '#0a110c',
+    borderColor: '#19281e',
+    borderWidth: 1,
+    borderRadius: 16,
+    height: 165,
+    marginVertical: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+    overflow: 'hidden',
+  },
+  scrollArea: {
+    flex: 1,
+    marginVertical: 4,
+  },
+  scrollContent: {
+    paddingBottom: 16,
   },
 });

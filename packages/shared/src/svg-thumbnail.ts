@@ -94,6 +94,63 @@ export interface SvgOptions {
   strokeColor?: string;
 }
 
+export interface RouteProjector {
+  project: (coord: [number, number]) => [number, number];
+  size: number;
+  viewBox: string;
+}
+
+/**
+ * Creates a geographic coordinate to SVG viewport projector.
+ * Preserves exact geometric aspect ratio and inverts latitude (Y-axis).
+ */
+export function createRouteProjector(
+  coordinates: [number, number][],
+  size = 200,
+  padding = 25
+): RouteProjector {
+  let minLon = Infinity;
+  let maxLon = -Infinity;
+  let minLat = Infinity;
+  let maxLat = -Infinity;
+
+  for (const [lon, lat] of coordinates) {
+    if (lon < minLon) minLon = lon;
+    if (lon > maxLon) maxLon = lon;
+    if (lat < minLat) minLat = lat;
+    if (lat > maxLat) maxLat = lat;
+  }
+
+  const widthDeg = maxLon - minLon;
+  const heightDeg = maxLat - minLat;
+
+  // Account for latitude distortion in meters
+  const midLatRad = (((minLat + maxLat) / 2) * Math.PI) / 180;
+  const lonScaleFactor = Math.cos(midLatRad);
+
+  const projectedWidth = widthDeg * lonScaleFactor;
+  const projectedHeight = heightDeg;
+
+  const maxDimension = Math.max(projectedWidth, projectedHeight, 0.000001);
+  const availableSpan = size - 2 * padding;
+  const scale = availableSpan / maxDimension;
+
+  const centerLon = (minLon + maxLon) / 2;
+  const centerLat = (minLat + maxLat) / 2;
+
+  const project = ([lon, lat]: [number, number]): [number, number] => {
+    const x = size / 2 + (lon - centerLon) * lonScaleFactor * scale;
+    const y = size / 2 - (lat - centerLat) * scale;
+    return [Math.round(x * 10) / 10, Math.round(y * 10) / 10];
+  };
+
+  return {
+    project,
+    size,
+    viewBox: `0 0 ${size} ${size}`,
+  };
+}
+
 /**
  * Generates an SVG polyline string fitted to a square viewBox
  * Preserves exact geometric aspect ratio (no oval distortion) and inverts Y-axis.
@@ -112,45 +169,10 @@ export function generateThumbnailSvg(
   const strokeColor = options.strokeColor ?? '#1F2A1E';
 
   const simplified = autoSimplifyCoordinates(coordinates);
+  const projector = createRouteProjector(simplified, size, padding);
 
-  let minLon = Infinity;
-  let maxLon = -Infinity;
-  let minLat = Infinity;
-  let maxLat = -Infinity;
-
-  for (const [lon, lat] of simplified) {
-    if (lon < minLon) minLon = lon;
-    if (lon > maxLon) maxLon = lon;
-    if (lat < minLat) minLat = lat;
-    if (lat > maxLat) maxLat = lat;
-  }
-
-  const widthDeg = maxLon - minLon;
-  const heightDeg = maxLat - minLat;
-
-  // Account for latitude distortion in meters
-  const midLatRad = ((minLat + maxLat) / 2 * Math.PI) / 180;
-  const lonScaleFactor = Math.cos(midLatRad);
-
-  const projectedWidth = widthDeg * lonScaleFactor;
-  const projectedHeight = heightDeg;
-
-  const maxDimension = Math.max(projectedWidth, projectedHeight, 0.000001);
-  const availableSpan = size - 2 * padding;
-  const scale = availableSpan / maxDimension;
-
-  const centerLon = (minLon + maxLon) / 2;
-  const centerLat = (minLat + maxLat) / 2;
-
-  // Map each coordinate to [svgX, svgY]
-  // Invert Y-axis: high latitude = top of SVG (small Y)
-  const points = simplified.map(([lon, lat]) => {
-    const x = size / 2 + (lon - centerLon) * lonScaleFactor * scale;
-    const y = size / 2 - (lat - centerLat) * scale;
-    return `${Math.round(x * 10) / 10},${Math.round(y * 10) / 10}`;
-  });
-
-  const pointsStr = points.join(' ');
+  const points = simplified.map(projector.project);
+  const pointsStr = points.map(([x, y]) => `${x},${y}`).join(' ');
 
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" width="100%" height="100%" fill="none"><polyline points="${pointsStr}" fill="none" stroke="${strokeColor}" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
 }
