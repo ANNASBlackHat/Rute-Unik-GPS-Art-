@@ -14,8 +14,8 @@ function getDeepKeys(obj: Record<string, unknown>, prefix = ''): string[] {
   return keys;
 }
 
-const enPath = path.join(process.cwd(), 'messages/en.json');
-const idPath = path.join(process.cwd(), 'messages/id.json');
+const enPath = path.join(process.cwd(), 'apps/web/messages/en.json');
+const idPath = path.join(process.cwd(), 'apps/web/messages/id.json');
 
 const en = JSON.parse(fs.readFileSync(enPath, 'utf8'));
 const id = JSON.parse(fs.readFileSync(idPath, 'utf8'));

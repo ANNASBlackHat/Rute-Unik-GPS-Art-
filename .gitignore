@@ -13,9 +13,14 @@
 # testing
 /coverage
 
-# next.js
-/.next/
+# next.js & turbo
+.next/
+**/.next/
+.turbo/
+**/.turbo/
 /out/
+dist/
+**/dist/
 
 # production
 /build

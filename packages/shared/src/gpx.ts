@@ -44,40 +44,38 @@ export function parseGpx(xmlContent: string): ParsedGpx {
     }
   }
 
-  if (coordinates.length < 2) {
-    throw new Error('GPX must contain at least 2 valid trackpoints.');
-  }
-
-  // Calculate cumulative distance
-  let totalDistanceMeters = 0;
+  // Calculate total distance along coordinates
+  let distanceMeters = 0;
   for (let i = 0; i < coordinates.length - 1; i++) {
-    totalDistanceMeters += haversineDistance(coordinates[i], coordinates[i + 1]);
+    distanceMeters += haversineDistance(coordinates[i], coordinates[i + 1]);
   }
+  distanceMeters = Math.round(distanceMeters);
 
-  // Calculate elevation gain
+  // Calculate cumulative elevation gain
   let elevationGainMeters: number | null = null;
   if (elevationPoints.length > 1) {
     let gain = 0;
     for (let i = 0; i < elevationPoints.length - 1; i++) {
       const diff = elevationPoints[i + 1] - elevationPoints[i];
-      if (diff > 0) {
-        gain += diff;
-      }
+      if (diff > 0) gain += diff;
     }
     elevationGainMeters = Math.round(gain * 10) / 10;
   }
 
-  // Build WKT LINESTRING(lon lat, ...)
-  const wktPoints = coordinates.map(([lon, lat]) => `${lon} ${lat}`).join(', ');
-  const wktLineString = `LINESTRING(${wktPoints})`;
+  // Generate WKT LINESTRING (lon lat, lon lat)
+  let wktLineString = '';
+  if (coordinates.length > 0) {
+    const pairs = coordinates.map(([lon, lat]) => `${lon} ${lat}`);
+    wktLineString = `LINESTRING(${pairs.join(', ')})`;
+  }
 
-  // Generate thumbnail SVG
+  // Generate SVG thumbnail
   const thumbnailSvg = generateThumbnailSvg(coordinates);
 
   return {
     coordinates,
     elevationPoints,
-    distanceMeters: Math.round(totalDistanceMeters),
+    distanceMeters,
     elevationGainMeters,
     wktLineString,
     thumbnailSvg,

@@ -87,7 +87,7 @@ export function autoSimplifyCoordinates(
   return simplified;
 }
 
-interface SvgOptions {
+export interface SvgOptions {
   size?: number;
   padding?: number;
   strokeWidth?: number;

@@ -1,4 +1,4 @@
-import { parseGpx } from '../src/lib/gpx';
+import { parseGpx } from '../packages/shared/src/gpx';
 
 const sampleGpx = `<?xml version="1.0" encoding="UTF-8"?>
 <gpx version="1.1" creator="RuteUnik">

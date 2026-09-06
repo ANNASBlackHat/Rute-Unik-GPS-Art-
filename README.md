@@ -17,17 +17,18 @@ A directory of GPS-art running routes — routes whose GPX trace forms a shape (
 
 ```
 .
-├── messages/            # i18n translation files (en.json, id.json)
+├── apps/
+│   ├── web/             # Next.js 16 App Router (web application & admin)
+│   │   ├── messages/    # i18n translation files (en.json, id.json)
+│   │   ├── public/      # Static assets & maplibre bundle
+│   │   └── src/         # Web pages, UI components, API routes
+│   └── mobile/          # (Upcoming) Expo mobile application
+├── packages/
+│   └── shared/          # Shared spatial algorithms, GPX parsers, types (@rute-unik/shared)
 ├── examples/            # Sample GPX route files (e.g. kucing-ugm.gpx)
 ├── scripts/             # Utility/test scripts run with tsx (db setup, benchmarks, checks)
-├── src/
-│   ├── app/             # Next.js App Router: [locale] pages, API routes
-│   ├── components/      # UI components (map, run tracker, upload, admin, etc.)
-│   ├── i18n/            # next-intl configuration
-│   ├── lib/             # Core logic: GPX parsing, geo math, SVG thumbnails, Supabase clients
-│   └── middleware.ts    # Locale detection/routing middleware
 ├── supabase/            # SQL migrations and seed data
-└── .specs/              # Design docs: tech spec, user stories, task list
+└── .specs/              # Design docs: tech specs, user stories, task list
 ```
 
 ## Prerequisites
@@ -76,7 +77,9 @@ npx tsx scripts/test-gpx-svg.ts          # exercise GPX parsing / SVG thumbnail 
 npx tsx scripts/benchmark-spatial.ts     # EXPLAIN ANALYZE key spatial queries
 ```
 
-## Deployment
+## Deployment (Vercel)
 
-<!-- TODO: no CI/CD config (.github/workflows, .gitlab-ci.yml) or deployment config exists in the repo. Deployment target is not verifiable — the scaffolding README mentions Vercel, but nothing is set up. -->
-Not configured in this repository.
+The web app is deployed on **Vercel** as a Turborepo monorepo:
+1. In the Vercel Dashboard project settings (**Settings → General**), set **Root Directory** to `apps/web`.
+2. Ensure **"Include files outside the root directory in the Build Step"** is checked (enabled by default).
+3. Vercel will automatically build `apps/web` with `@rute-unik/shared` dependencies and leverage Turborepo caching.

@@ -19,7 +19,9 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@rute-unik/shared": ["../../packages/shared/src/index.ts"],
+      "@rute-unik/shared/*": ["../../packages/shared/src/*"]
     }
   },
   "include": [
