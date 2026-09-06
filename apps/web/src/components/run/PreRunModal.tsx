@@ -53,16 +53,16 @@ export function PreRunModal({ isOpen, onStart, onCancel }: PreRunModalProps) {
               <div className="flex items-center gap-2">
                 <Smartphone size={16} className="text-trail-orange shrink-0" />
                 <span className="font-display text-xs uppercase text-ink font-bold">
-                  Disarankan: Gunakan Aplikasi Android
+                  {tApk('modalTitle')}
                 </span>
               </div>
               <span className="text-[10px] font-data px-1.5 py-0.5 rounded-[3px] bg-moss/20 text-moss font-bold uppercase">
-                Expo APK
+                {tApk('badge')}
               </span>
             </div>
 
             <p className="font-body text-xs text-ink/80 leading-relaxed">
-              Aplikasi mobile mendukung pelacakan GPS di latar belakang saat layar HP mati/dikantongi, panduan suara turn-by-turn otomatis, dan audio ducking.
+              {tApk('webLimitationText')}
             </p>
 
             <div className="pt-1 flex flex-wrap items-center gap-2">
@@ -83,7 +83,7 @@ export function PreRunModal({ isOpen, onStart, onCancel }: PreRunModalProps) {
                 onClick={() => setShowManualGuide((v) => !v)}
                 className="font-display text-[11px] uppercase tracking-wider text-ink/70 hover:text-ink underline px-2 py-1 cursor-pointer"
               >
-                {showManualGuide ? 'Sembunyikan Petunjuk' : 'Petunjuk Instalasi Manual'}
+                {showManualGuide ? tApk('close') : tApk('manualInstallNotice')}
               </button>
             </div>
 

@@ -226,8 +226,8 @@
     "downloadCta": "Download Android APK (Expo)",
     "continueWeb": "Continue in Web Browser",
     "close": "Close",
-    "homeBannerTitle": "Run GPS Art Hands-Free with the Android App",
-    "homeBannerDesc": "Get turn-by-turn audio guidance in the background and high-accuracy GPS tracking with your phone screen locked. Free APK via Expo.",
-    "homeBannerBtn": "Download Android APK (APK)"
+    "homeBannerTitle": "Android App Available",
+    "homeBannerDesc": "Background GPS tracking with screen locked & turn-by-turn voice cues.",
+    "homeBannerBtn": "Download APK"
   }
 }
