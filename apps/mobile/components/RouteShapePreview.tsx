@@ -3,6 +3,8 @@ import { View, StyleSheet, StyleProp, ViewStyle, Text } from 'react-native';
 import Svg, { Polyline, Path, Polygon, SvgXml } from 'react-native-svg';
 import { generateThumbnailSvg } from '@rute-unik/shared';
 
+import { useTheme } from '../services/themeContext';
+
 export interface RouteShapePreviewProps {
   svgXml?: string | null;
   coordinates?: [number, number][];
@@ -58,26 +60,29 @@ export function extractShapeInfo(rawXml: string): ParsedShape | null {
 export function RouteShapePreview({
   svgXml,
   coordinates,
-  strokeColor = '#34d399',
+  strokeColor,
   strokeWidth = 3.5,
   size = 120,
   style,
   fallbackLabel,
   showEndpoints = false,
 }: RouteShapePreviewProps) {
+  const { theme, mode } = useTheme();
+  const effectiveStrokeColor = strokeColor ?? theme.routeStroke;
+
   const shape = useMemo<ParsedShape | null>(() => {
     if (svgXml && svgXml.trim().length > 0) {
       return extractShapeInfo(svgXml);
     }
     if (coordinates && coordinates.length >= 2) {
       const generated = generateThumbnailSvg(coordinates, {
-        strokeColor,
+        strokeColor: effectiveStrokeColor,
         strokeWidth,
       });
       return extractShapeInfo(generated);
     }
     return null;
-  }, [svgXml, coordinates, strokeColor, strokeWidth]);
+  }, [svgXml, coordinates, effectiveStrokeColor, strokeWidth]);
 
   return (
     <View style={[styles.container, style]}>
@@ -88,7 +93,7 @@ export function RouteShapePreview({
               <Polyline
                 points={shape.points}
                 fill="none"
-                stroke={strokeColor}
+                stroke={effectiveStrokeColor}
                 strokeWidth={strokeWidth}
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -99,7 +104,7 @@ export function RouteShapePreview({
               <Path
                 d={shape.d}
                 fill="none"
-                stroke={strokeColor}
+                stroke={effectiveStrokeColor}
                 strokeWidth={strokeWidth}
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -110,7 +115,7 @@ export function RouteShapePreview({
               <Polygon
                 points={shape.points}
                 fill="none"
-                stroke={strokeColor}
+                stroke={effectiveStrokeColor}
                 strokeWidth={strokeWidth}
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -124,20 +129,56 @@ export function RouteShapePreview({
         <View style={styles.fallbackContainer}>
           <Text style={styles.fallbackIcon}>🗺️</Text>
           {fallbackLabel ? (
-            <Text style={styles.fallbackText}>{fallbackLabel}</Text>
+            <Text style={[styles.fallbackText, { color: theme.inkMuted }]}>
+              {fallbackLabel}
+            </Text>
           ) : null}
         </View>
       )}
 
       {showEndpoints ? (
         <View style={styles.endpointsRow}>
-          <View style={styles.endpointTag}>
+          <View
+            style={[
+              styles.endpointTag,
+              {
+                backgroundColor:
+                  mode === 'light' ? 'rgba(247, 245, 239, 0.92)' : 'rgba(12, 18, 14, 0.85)',
+                borderColor: theme.cardBorder,
+                borderWidth: 1,
+              },
+            ]}
+          >
             <View style={[styles.endpointDot, { backgroundColor: '#10b981' }]} />
-            <Text style={styles.endpointText}>Start</Text>
+            <Text
+              style={[
+                styles.endpointText,
+                { color: mode === 'light' ? theme.ink : '#d1fae5' },
+              ]}
+            >
+              Start
+            </Text>
           </View>
-          <View style={styles.endpointTag}>
+          <View
+            style={[
+              styles.endpointTag,
+              {
+                backgroundColor:
+                  mode === 'light' ? 'rgba(247, 245, 239, 0.92)' : 'rgba(12, 18, 14, 0.85)',
+                borderColor: theme.cardBorder,
+                borderWidth: 1,
+              },
+            ]}
+          >
             <View style={[styles.endpointDot, { backgroundColor: '#ef4444' }]} />
-            <Text style={styles.endpointText}>Finish</Text>
+            <Text
+              style={[
+                styles.endpointText,
+                { color: mode === 'light' ? theme.ink : '#d1fae5' },
+              ]}
+            >
+              Finish
+            </Text>
           </View>
         </View>
       ) : null}

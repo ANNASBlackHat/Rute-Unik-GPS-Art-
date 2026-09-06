@@ -17,10 +17,12 @@ import {
   getRouteDetailWithCoordinates,
 } from '../../services/routeService';
 import { RouteShapePreview } from '../../components/RouteShapePreview';
+import { useTheme } from '../../services/themeContext';
 
 export default function RouteDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { theme, mode, toggleTheme } = useTheme();
 
   const [route, setRoute] = useState<MobileRouteDetail>(() =>
     getRouteDetailWithCoordinates(id ?? 'kucing-ugm')
@@ -48,38 +50,120 @@ export default function RouteDetailScreen() {
   }, [id]);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.paper }]}>
       <View style={styles.container}>
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* Header Title Card */}
-          <View style={styles.titleCard}>
-            <View style={styles.categoryPill}>
-              <Text style={styles.categoryText}>
-                {route.shapeCategory.toUpperCase()} GPS ART
-              </Text>
+          {/* Header Title Card with Theme Toggle */}
+          <View
+            style={[
+              styles.titleCard,
+              {
+                backgroundColor: theme.chalk,
+                borderColor: theme.cardBorder,
+              },
+            ]}
+          >
+            <View style={styles.titleCardTop}>
+              <View
+                style={[
+                  styles.categoryPill,
+                  {
+                    backgroundColor: theme.badgeBg,
+                    borderColor: theme.badgeBorder,
+                  },
+                ]}
+              >
+                <Text
+                  style={[styles.categoryText, { color: theme.badgeText }]}
+                >
+                  {route.shapeCategory.toUpperCase()} GPS ART
+                </Text>
+              </View>
+
+              {/* 1-Tap Theme Toggle */}
+              <TouchableOpacity
+                style={[
+                  styles.themeToggle,
+                  {
+                    backgroundColor: theme.chalkSubtle,
+                    borderColor: theme.cardBorder,
+                  },
+                ]}
+                onPress={toggleTheme}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.themeToggleText, { color: theme.ink }]}>
+                  {mode === 'light' ? '☀️ Paper' : '🌙 AMOLED'}
+                </Text>
+              </TouchableOpacity>
             </View>
-            <Text style={styles.routeName}>{route.name}</Text>
-            <Text style={styles.routeCity}>📍 {route.city}, Indonesia</Text>
+
+            <Text style={[styles.routeName, { color: theme.ink }]}>
+              {route.name}
+            </Text>
+            <Text style={[styles.routeCity, { color: theme.inkMuted }]}>
+              📍 {route.city}, Indonesia
+            </Text>
           </View>
 
           {/* Hero GPS Art Shape Canvas */}
-          <View style={styles.heroShapeCard}>
+          <View
+            style={[
+              styles.heroShapeCard,
+              {
+                backgroundColor: theme.chalk,
+                borderColor: theme.cardBorder,
+              },
+            ]}
+          >
             <View style={styles.heroShapeHeader}>
-              <Text style={styles.heroShapeTitle}>BENTUK GPS ART</Text>
-              <View style={styles.heroShapeBadge}>
-                <Text style={styles.heroShapeBadgeText}>100% Sesuai Rute</Text>
+              <Text
+                style={[styles.heroShapeTitle, { color: theme.inkMuted }]}
+              >
+                BENTUK GPS ART
+              </Text>
+              <View
+                style={[
+                  styles.heroShapeBadge,
+                  {
+                    backgroundColor: theme.badgeBg,
+                    borderColor: theme.badgeBorder,
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.heroShapeBadgeText,
+                    {
+                      color:
+                        mode === 'light'
+                          ? theme.trailOrange
+                          : theme.routeStroke,
+                    },
+                  ]}
+                >
+                  100% Sesuai Rute
+                </Text>
               </View>
             </View>
 
-            <View style={styles.heroShapeBox}>
+            <View
+              style={[
+                styles.heroShapeBox,
+                {
+                  backgroundColor: theme.chalkSubtle,
+                  borderColor: theme.contourTan,
+                },
+              ]}
+            >
               <RouteShapePreview
                 svgXml={route.thumbnailSvg}
                 coordinates={route.coordinates}
-                strokeColor="#34d399"
+                strokeColor={theme.routeStroke}
                 strokeWidth={3.8}
                 size={200}
                 showEndpoints={true}
@@ -87,75 +171,186 @@ export default function RouteDetailScreen() {
               />
             </View>
 
-            <Text style={styles.heroShapeHint}>
-              💡 Gambar bentuk ini di atas peta jalanan dengan berlari mengikuti panduan suara turn-by-turn.
+            <Text
+              style={[styles.heroShapeHint, { color: theme.inkMuted }]}
+            >
+              💡 Gambar bentuk ini di atas peta jalanan dengan berlari mengikuti
+              panduan suara turn-by-turn.
             </Text>
           </View>
 
           {/* Stats Bar */}
           <View style={styles.statsGrid}>
-            <View style={styles.statBox}>
-              <Text style={styles.statLabel}>JARAK TOTAL</Text>
-              <Text style={styles.statNumber}>
+            <View
+              style={[
+                styles.statBox,
+                {
+                  backgroundColor: theme.chalk,
+                  borderColor: theme.cardBorder,
+                },
+              ]}
+            >
+              <Text style={[styles.statLabel, { color: theme.inkMuted }]}>
+                JARAK TOTAL
+              </Text>
+              <Text style={[styles.statNumber, { color: theme.ink }]}>
                 {formatDistanceKm(route.distanceMeters)}
               </Text>
             </View>
 
-            <View style={styles.statBox}>
-              <Text style={styles.statLabel}>ELEVASI</Text>
-              <Text style={styles.statNumber}>
+            <View
+              style={[
+                styles.statBox,
+                {
+                  backgroundColor: theme.chalk,
+                  borderColor: theme.cardBorder,
+                },
+              ]}
+            >
+              <Text style={[styles.statLabel, { color: theme.inkMuted }]}>
+                ELEVASI
+              </Text>
+              <Text style={[styles.statNumber, { color: theme.ink }]}>
                 +{route.elevationGainMeters ?? 0}m
               </Text>
             </View>
 
-            <View style={styles.statBox}>
-              <Text style={styles.statLabel}>TOTAL BELOKAN</Text>
-              <Text style={styles.statNumber}>
+            <View
+              style={[
+                styles.statBox,
+                {
+                  backgroundColor: theme.chalk,
+                  borderColor: theme.cardBorder,
+                },
+              ]}
+            >
+              <Text style={[styles.statLabel, { color: theme.inkMuted }]}>
+                TOTAL BELOKAN
+              </Text>
+              <Text style={[styles.statNumber, { color: theme.ink }]}>
                 {route.totalTurns ?? route.turnCues?.length ?? 0}
               </Text>
             </View>
           </View>
 
           {/* Audio Guidance Feature Callout */}
-          <View style={styles.featureCard}>
-            <Text style={styles.featureTitle}>🔊 Panduan Suara Turn-by-Turn</Text>
-            <Text style={styles.featureDescription}>
+          <View
+            style={[
+              styles.featureCard,
+              {
+                backgroundColor:
+                  mode === 'light' ? theme.chalkSubtle : '#122318',
+                borderColor:
+                  mode === 'light' ? theme.contourTan : '#1d3e28',
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.featureTitle,
+                {
+                  color:
+                    mode === 'light' ? theme.trailOrange : '#34d399',
+                },
+              ]}
+            >
+              🔊 Panduan Suara Turn-by-Turn
+            </Text>
+            <Text
+              style={[
+                styles.featureDescription,
+                {
+                  color: mode === 'light' ? theme.ink : '#d1fae5',
+                },
+              ]}
+            >
               Aplikasi ini akan memandu arah lari Anda secara otomatis:
             </Text>
             <View style={styles.bulletList}>
-              <Text style={styles.bulletItem}>
+              <Text
+                style={[
+                  styles.bulletItem,
+                  { color: mode === 'light' ? theme.inkMuted : '#a7f3d0' },
+                ]}
+              >
                 • Notifikasi belokan di latar belakang (layar terkunci).
               </Text>
-              <Text style={styles.bulletItem}>
+              <Text
+                style={[
+                  styles.bulletItem,
+                  { color: mode === 'light' ? theme.inkMuted : '#a7f3d0' },
+                ]}
+              >
                 • Peringatan suara otomatis saat belok kanan / kiri.
               </Text>
-              <Text style={styles.bulletItem}>
+              <Text
+                style={[
+                  styles.bulletItem,
+                  { color: mode === 'light' ? theme.inkMuted : '#a7f3d0' },
+                ]}
+              >
                 • Alarm instan jika keluar dari jalur bentuk GPS Art.
               </Text>
-              <Text style={styles.bulletItem}>
+              <Text
+                style={[
+                  styles.bulletItem,
+                  { color: mode === 'light' ? theme.inkMuted : '#a7f3d0' },
+                ]}
+              >
                 • Musik (Spotify) mengecil otomatis saat suara pemandu bicara.
               </Text>
             </View>
           </View>
 
           {/* Route Info Section */}
-          <View style={styles.infoCard}>
-            <Text style={styles.infoHeading}>TIPS BERLARI</Text>
-            <Text style={styles.infoBody}>
-              Pastikan GPS diatur ke Akurasi Tinggi. Taruh HP di saku atau armband,
-              pasang earphone, dan dengarkan panduan suara tanpa perlu terus melihat layar.
+          <View
+            style={[
+              styles.infoCard,
+              {
+                backgroundColor: theme.chalk,
+                borderColor: theme.cardBorder,
+              },
+            ]}
+          >
+            <Text
+              style={[styles.infoHeading, { color: theme.inkMuted }]}
+            >
+              TIPS BERLARI
+            </Text>
+            <Text style={[styles.infoBody, { color: theme.ink }]}>
+              Pastikan GPS diatur ke Akurasi Tinggi. Taruh HP di saku atau
+              armband, pasang earphone, dan dengarkan panduan suara tanpa perlu
+              terus melihat layar.
             </Text>
           </View>
         </ScrollView>
 
         {/* Bottom Floating Action Button */}
-        <View style={styles.bottomBar}>
+        <View
+          style={[
+            styles.bottomBar,
+            {
+              backgroundColor: theme.paper,
+              borderTopColor: theme.contourTan,
+            },
+          ]}
+        >
           <TouchableOpacity
-            style={styles.startButton}
+            style={[
+              styles.startButton,
+              { backgroundColor: theme.primaryButtonBg },
+            ]}
             activeOpacity={0.85}
             onPress={() => router.push(`/run/${route.id}`)}
           >
-            <Text style={styles.startButtonText}>MULAI LARI SEKARANG 🏃‍♂️</Text>
+            <Text
+              style={[
+                styles.startButtonText,
+                { color: theme.primaryButtonText },
+              ]}
+            >
+              MULAI LARI SEKARANG 🏃‍♂️
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -179,43 +374,48 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   titleCard: {
-    backgroundColor: '#131915',
-    borderColor: '#223126',
     borderWidth: 1,
-    borderRadius: 20,
-    padding: 20,
+    borderRadius: 12,
+    padding: 18,
     marginBottom: 16,
   },
-  categoryPill: {
-    alignSelf: 'flex-start',
-    backgroundColor: '#1c2820',
-    borderColor: '#2e4534',
-    borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+  titleCardTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 10,
+  },
+  categoryPill: {
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
   },
   categoryText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#34d399',
+  },
+  themeToggle: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  themeToggleText: {
+    fontSize: 11,
+    fontWeight: '700',
   },
   routeName: {
-    fontSize: 26,
+    fontSize: 24,
     fontWeight: 'bold',
-    color: '#ffffff',
     marginBottom: 4,
   },
   routeCity: {
-    fontSize: 14,
-    color: '#9ca3af',
+    fontSize: 13,
   },
   heroShapeCard: {
-    backgroundColor: '#131915',
-    borderColor: '#223126',
     borderWidth: 1,
-    borderRadius: 20,
+    borderRadius: 12,
     padding: 18,
     marginBottom: 16,
   },
@@ -228,27 +428,21 @@ const styles = StyleSheet.create({
   heroShapeTitle: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#9ca3af',
     letterSpacing: 1,
   },
   heroShapeBadge: {
-    backgroundColor: '#1a2c1f',
-    borderColor: '#2e4933',
     borderWidth: 1,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 8,
+    borderRadius: 4,
   },
   heroShapeBadgeText: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#34d399',
   },
   heroShapeBox: {
-    backgroundColor: '#0a110c',
-    borderColor: '#19281e',
     borderWidth: 1,
-    borderRadius: 16,
+    borderRadius: 10,
     height: 230,
     padding: 12,
     justifyContent: 'center',
@@ -269,41 +463,33 @@ const styles = StyleSheet.create({
   },
   statBox: {
     flex: 1,
-    backgroundColor: '#131915',
-    borderColor: '#223126',
     borderWidth: 1,
-    borderRadius: 16,
+    borderRadius: 12,
     padding: 14,
     alignItems: 'center',
   },
   statLabel: {
     fontSize: 10,
-    color: '#6b7280',
     fontWeight: '600',
     marginBottom: 4,
   },
   statNumber: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#f3f4f6',
   },
   featureCard: {
-    backgroundColor: '#122318',
-    borderColor: '#1d3e28',
     borderWidth: 1,
-    borderRadius: 18,
+    borderRadius: 12,
     padding: 18,
     marginBottom: 16,
   },
   featureTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#34d399',
     marginBottom: 8,
   },
   featureDescription: {
     fontSize: 13,
-    color: '#d1fae5',
     marginBottom: 10,
   },
   bulletList: {
@@ -311,25 +497,20 @@ const styles = StyleSheet.create({
   },
   bulletItem: {
     fontSize: 12,
-    color: '#a7f3d0',
     lineHeight: 18,
   },
   infoCard: {
-    backgroundColor: '#131915',
-    borderColor: '#223126',
     borderWidth: 1,
-    borderRadius: 16,
+    borderRadius: 12,
     padding: 16,
   },
   infoHeading: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#9ca3af',
     marginBottom: 6,
   },
   infoBody: {
     fontSize: 13,
-    color: '#6b7280',
     lineHeight: 20,
   },
   bottomBar: {
@@ -337,21 +518,17 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#0c0f0d',
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: '#1a231d',
   },
   startButton: {
-    backgroundColor: '#10b981',
-    borderRadius: 14,
+    borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
   },
   startButtonText: {
     fontSize: 15,
     fontWeight: 'bold',
-    color: '#042714',
     letterSpacing: 0.5,
   },
 });

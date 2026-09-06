@@ -35,10 +35,12 @@ import { TurnType } from '@rute-unik/shared';
 import { LiveRouteTracker } from '../../components/LiveRouteTracker';
 import { RouteShapePreview } from '../../components/RouteShapePreview';
 import { TurnDirectionIcon } from '../../components/TurnDirectionIcon';
+import { useTheme } from '../../services/themeContext';
 
 export default function RunModeScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  const { theme, mode, toggleTheme } = useTheme();
 
   const [route, setRoute] = useState<MobileRouteDetail>(() =>
     getRouteDetailWithCoordinates(id ?? 'kucing-ugm')
@@ -350,12 +352,14 @@ export default function RunModeScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.paper }]}>
       <View style={styles.container}>
         {/* Top Header Bar */}
         <View style={styles.topBar}>
           <View>
-            <Text style={styles.topRouteName}>{route.name}</Text>
+            <Text style={[styles.topRouteName, { color: theme.ink }]}>
+              {route.name}
+            </Text>
             <View style={styles.gpsRow}>
               <View
                 style={[
@@ -367,7 +371,7 @@ export default function RunModeScreen() {
                       : styles.gpsDotSim,
                 ]}
               />
-              <Text style={styles.gpsText}>
+              <Text style={[styles.gpsText, { color: theme.inkMuted }]}>
                 {gpsStatus === 'active'
                   ? `GPS Aktif • Akurasi ±${Math.round(gpsAccuracy ?? 5)}m`
                   : gpsStatus === 'simulated'
@@ -380,23 +384,59 @@ export default function RunModeScreen() {
           </View>
 
           <View style={styles.topRightActions}>
+            {/* 1-Tap Theme Toggle */}
+            <TouchableOpacity
+              style={[
+                styles.themeButton,
+                {
+                  backgroundColor: theme.chalk,
+                  borderColor: theme.cardBorder,
+                },
+              ]}
+              onPress={toggleTheme}
+            >
+              <Text style={[styles.themeButtonText, { color: theme.ink }]}>
+                {mode === 'light' ? '☀️' : '🌙'}
+              </Text>
+            </TouchableOpacity>
+
             <TouchableOpacity
               style={[
                 styles.modeButton,
-                isSimulationMode && styles.modeButtonActive,
+                {
+                  backgroundColor: isSimulationMode
+                    ? (mode === 'light' ? '#E0E7FF' : '#1e3a8a')
+                    : theme.chalk,
+                  borderColor: isSimulationMode ? '#3b82f6' : theme.cardBorder,
+                },
               ]}
               onPress={() => setIsSimulationMode((s) => !s)}
             >
-              <Text style={styles.modeButtonText}>
+              <Text
+                style={[
+                  styles.modeButtonText,
+                  {
+                    color: isSimulationMode
+                      ? '#2563eb'
+                      : theme.ink,
+                  },
+                ]}
+              >
                 {isSimulationMode ? '🎮 Demo' : '🛰️ GPS'}
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.langButton}
+              style={[
+                styles.langButton,
+                {
+                  backgroundColor: theme.chalk,
+                  borderColor: theme.cardBorder,
+                },
+              ]}
               onPress={() => setLanguage((l) => (l === 'id' ? 'en' : 'id'))}
             >
-              <Text style={styles.langButtonText}>
+              <Text style={[styles.langButtonText, { color: theme.ink }]}>
                 {language === 'id' ? 'ID 🇮🇩' : 'EN 🇬🇧'}
               </Text>
             </TouchableOpacity>
@@ -414,12 +454,30 @@ export default function RunModeScreen() {
           showsVerticalScrollIndicator={false}
         >
           {/* Turn Guidance Live Card */}
-          <View style={styles.turnCard}>
+          <View
+            style={[
+              styles.turnCard,
+              {
+                backgroundColor: theme.turnCardBg,
+                borderColor: theme.turnCardBorder,
+              },
+            ]}
+          >
             <View
               style={[
                 styles.turnIconBox,
-                isOffRoute && styles.turnIconBoxOffRoute,
-                upcomingTurn.turnType === 'finish' && styles.turnIconBoxFinish,
+                {
+                  backgroundColor: isOffRoute
+                    ? (mode === 'light' ? '#FEE2E2' : '#2b1212')
+                    : upcomingTurn.turnType === 'finish'
+                      ? (mode === 'light' ? '#DCFCE7' : '#12331f')
+                      : theme.turnIconBoxBg,
+                  borderColor: isOffRoute
+                    ? '#EF4444'
+                    : upcomingTurn.turnType === 'finish'
+                      ? '#10b981'
+                      : theme.turnIconBoxBorder,
+                },
               ]}
             >
               <TurnDirectionIcon
@@ -429,28 +487,43 @@ export default function RunModeScreen() {
                   isOffRoute
                     ? '#ef4444'
                     : upcomingTurn.turnType === 'finish'
-                      ? '#10b981'
+                      ? (mode === 'light' ? theme.moss : '#10b981')
                       : upcomingTurn.turnType === 'u_turn'
                         ? '#f59e0b'
-                        : '#34d399'
+                        : (mode === 'light' ? theme.trailOrange : '#34d399')
                 }
                 strokeWidth={3.8}
               />
             </View>
             <View style={styles.turnTextBox}>
-              <Text style={styles.turnDistanceText}>
+              <Text
+                style={[
+                  styles.turnDistanceText,
+                  {
+                    color:
+                      mode === 'light'
+                        ? theme.ink
+                        : '#34d399',
+                  },
+                ]}
+              >
                 {upcomingTurn.direction}
                 {upcomingTurn.distanceMeters > 0
                   ? ` dlm ${upcomingTurn.distanceMeters}m`
                   : ''}
               </Text>
-              <Text style={styles.turnInstructionText}>
+              <Text
+                style={[
+                  styles.turnInstructionText,
+                  { color: theme.inkMuted },
+                ]}
+              >
                 {upcomingTurn.instruction}
               </Text>
             </View>
           </View>
 
-          {/* Off-Route Warning (conditionally shown or toggled) */}
+          {/* Off-Route Warning */}
           {isOffRoute && (
             <View style={styles.offRouteBanner}>
               <Text style={styles.offRouteIcon}>⚠️</Text>
@@ -461,7 +534,15 @@ export default function RunModeScreen() {
           )}
 
           {/* Live GPS Art Shape Canvas & Runner Position Tracker */}
-          <View style={styles.liveTrackerBox}>
+          <View
+            style={[
+              styles.liveTrackerBox,
+              {
+                backgroundColor: theme.chalkSubtle,
+                borderColor: theme.contourTan,
+              },
+            ]}
+          >
             <LiveRouteTracker
               routeCoords={route.coordinates}
               runnerLocation={runnerLocation}
@@ -474,53 +555,119 @@ export default function RunModeScreen() {
           {/* Big HUD Metrics Grid */}
           <View style={styles.hudGrid}>
             {/* Timer Card */}
-            <View style={styles.hudCard}>
-              <Text style={styles.hudLabel}>WAKTU</Text>
-              <Text style={styles.hudTimer}>
+            <View
+              style={[
+                styles.hudCard,
+                {
+                  backgroundColor: theme.hudCardBg,
+                  borderColor: theme.hudCardBorder,
+                },
+              ]}
+            >
+              <Text style={[styles.hudLabel, { color: theme.inkMuted }]}>
+                WAKTU
+              </Text>
+              <Text
+                style={[
+                  styles.hudTimer,
+                  {
+                    color:
+                      mode === 'light'
+                        ? theme.trailOrange
+                        : '#34d399',
+                  },
+                ]}
+              >
                 {formatRunDuration(elapsedSeconds)}
               </Text>
-              <Text style={styles.hudSub}>
+              <Text style={[styles.hudSub, { color: theme.inkMuted }]}>
                 {isPaused ? 'DIJEDA' : 'BERJALAN'}
               </Text>
             </View>
 
             {/* Distance Card */}
-            <View style={styles.hudCard}>
-              <Text style={styles.hudLabel}>JARAK</Text>
-              <Text style={styles.hudMetric}>
+            <View
+              style={[
+                styles.hudCard,
+                {
+                  backgroundColor: theme.hudCardBg,
+                  borderColor: theme.hudCardBorder,
+                },
+              ]}
+            >
+              <Text style={[styles.hudLabel, { color: theme.inkMuted }]}>
+                JARAK
+              </Text>
+              <Text style={[styles.hudMetric, { color: theme.ink }]}>
                 {formatDistanceKm(distanceCoveredMeters)}
               </Text>
-              <Text style={styles.hudSub}>
+              <Text style={[styles.hudSub, { color: theme.inkMuted }]}>
                 dari {formatDistanceKm(route.distanceMeters)}
               </Text>
             </View>
 
             {/* Pace Card */}
-            <View style={styles.hudCard}>
-              <Text style={styles.hudLabel}>PACE RATA-RATA</Text>
-              <Text style={styles.hudMetric}>{currentPace}</Text>
-              <Text style={styles.hudSub}>min / km</Text>
+            <View
+              style={[
+                styles.hudCard,
+                {
+                  backgroundColor: theme.hudCardBg,
+                  borderColor: theme.hudCardBorder,
+                },
+              ]}
+            >
+              <Text style={[styles.hudLabel, { color: theme.inkMuted }]}>
+                PACE RATA-RATA
+              </Text>
+              <Text style={[styles.hudMetric, { color: theme.ink }]}>
+                {currentPace}
+              </Text>
+              <Text style={[styles.hudSub, { color: theme.inkMuted }]}>
+                min / km
+              </Text>
             </View>
 
             {/* Completion % Card */}
-            <View style={styles.hudCard}>
-              <Text style={styles.hudLabel}>PROGRES BENTUK</Text>
-              <Text style={styles.hudMetric}>{completionPercent}%</Text>
-              <Text style={styles.hudSub}>{route.shapeCategory.toUpperCase()}</Text>
+            <View
+              style={[
+                styles.hudCard,
+                {
+                  backgroundColor: theme.hudCardBg,
+                  borderColor: theme.hudCardBorder,
+                },
+              ]}
+            >
+              <Text style={[styles.hudLabel, { color: theme.inkMuted }]}>
+                PROGRES BENTUK
+              </Text>
+              <Text style={[styles.hudMetric, { color: theme.ink }]}>
+                {completionPercent}%
+              </Text>
+              <Text style={[styles.hudSub, { color: theme.inkMuted }]}>
+                {route.shapeCategory.toUpperCase()}
+              </Text>
             </View>
           </View>
 
           {/* Shape Completion Progress Bar */}
           <View style={styles.progressContainer}>
-            <View style={styles.progressBarBackground}>
+            <View
+              style={[
+                styles.progressBarBackground,
+                { backgroundColor: theme.progressBg },
+              ]}
+            >
               <View
                 style={[
                   styles.progressBarFill,
-                  { width: `${completionPercent}%` },
+                  {
+                    width: `${completionPercent}%`,
+                    backgroundColor: theme.progressFill,
+                  },
                 ]}
               />
             </View>
-            <Text style={styles.progressLabel}>
+            <Text style={[styles.progressLabel, { color: theme.inkMuted }]}>
               Penyelesaian Bentuk GPS Art: {completionPercent}%
             </Text>
           </View>
@@ -531,12 +678,22 @@ export default function RunModeScreen() {
           <TouchableOpacity
             style={[
               styles.pauseButton,
-              isPaused && styles.resumeButton,
+              {
+                backgroundColor: isPaused
+                  ? theme.moss
+                  : theme.chalk,
+                borderColor: theme.cardBorder,
+              },
             ]}
             activeOpacity={0.85}
             onPress={togglePause}
           >
-            <Text style={styles.pauseButtonText}>
+            <Text
+              style={[
+                styles.pauseButtonText,
+                { color: isPaused ? theme.chalk : theme.ink },
+              ]}
+            >
               {isPaused ? '▶️ LANJUT (RESUME)' : '⏸ JEDA (PAUSE)'}
             </Text>
           </TouchableOpacity>
@@ -552,38 +709,103 @@ export default function RunModeScreen() {
 
         {/* Completion Modal */}
         <Modal visible={isCompleted} transparent animationType="slide">
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalCard}>
+          <View
+            style={[
+              styles.modalOverlay,
+              {
+                backgroundColor:
+                  mode === 'light'
+                    ? 'rgba(31, 42, 30, 0.65)'
+                    : 'rgba(0,0,0,0.85)',
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.modalCard,
+                {
+                  backgroundColor: theme.modalCardBg,
+                  borderColor: theme.modalCardBorder,
+                },
+              ]}
+            >
               <Text style={styles.modalTrophy}>🎉 🏆 🐾</Text>
-              <Text style={styles.modalTitle}>Selamat! Rute Selesai!</Text>
-              <Text style={styles.modalSubtitle}>
+              <Text
+                style={[
+                  styles.modalTitle,
+                  {
+                    color:
+                      mode === 'light' ? theme.ink : '#34d399',
+                  },
+                ]}
+              >
+                Selamat! Rute Selesai!
+              </Text>
+              <Text
+                style={[styles.modalSubtitle, { color: theme.inkMuted }]}
+              >
                 Anda berhasil menyelesaikan bentuk GPS Art &quot;{route.name}&quot;!
               </Text>
 
               {/* Finished GPS Art Artwork Trophy Badge */}
-              <View style={styles.modalArtworkBox}>
+              <View
+                style={[
+                  styles.modalArtworkBox,
+                  {
+                    backgroundColor: theme.chalkSubtle,
+                    borderColor: theme.contourTan,
+                  },
+                ]}
+              >
                 <RouteShapePreview
                   svgXml={route.thumbnailSvg}
                   coordinates={route.coordinates}
-                  strokeColor="#34d399"
+                  strokeColor={theme.routeStroke}
                   strokeWidth={4}
                   size={150}
                   showEndpoints={true}
                 />
               </View>
 
-              <View style={styles.modalStats}>
+              <View
+                style={[
+                  styles.modalStats,
+                  {
+                    backgroundColor: theme.chalkSubtle,
+                    borderColor: theme.contourTan,
+                    borderWidth: 1,
+                  },
+                ]}
+              >
                 <View style={styles.modalStatItem}>
-                  <Text style={styles.modalStatLabel}>Total Waktu</Text>
-                  <Text style={styles.modalStatVal}>
+                  <Text
+                    style={[
+                      styles.modalStatLabel,
+                      { color: theme.inkMuted },
+                    ]}
+                  >
+                    Total Waktu
+                  </Text>
+                  <Text
+                    style={[styles.modalStatVal, { color: theme.ink }]}
+                  >
                     {formatRunDuration(
                       sessionSummary?.totalElapsedSeconds ?? elapsedSeconds
                     )}
                   </Text>
                 </View>
                 <View style={styles.modalStatItem}>
-                  <Text style={styles.modalStatLabel}>Total Jarak</Text>
-                  <Text style={styles.modalStatVal}>
+                  <Text
+                    style={[
+                      styles.modalStatLabel,
+                      { color: theme.inkMuted },
+                    ]}
+                  >
+                    Total Jarak
+                  </Text>
+                  <Text
+                    style={[styles.modalStatVal, { color: theme.ink }]}
+                  >
                     {formatDistanceKm(
                       sessionSummary?.coveredDistanceMeters ??
                         distanceCoveredMeters
@@ -591,18 +813,35 @@ export default function RunModeScreen() {
                   </Text>
                 </View>
                 <View style={styles.modalStatItem}>
-                  <Text style={styles.modalStatLabel}>Pace</Text>
-                  <Text style={styles.modalStatVal}>
+                  <Text
+                    style={[
+                      styles.modalStatLabel,
+                      { color: theme.inkMuted },
+                    ]}
+                  >
+                    Pace
+                  </Text>
+                  <Text
+                    style={[styles.modalStatVal, { color: theme.ink }]}
+                  >
                     {sessionSummary?.averagePaceMinPerKm ?? currentPace}/km
                   </Text>
                 </View>
               </View>
 
               <TouchableOpacity
-                style={styles.modalCloseButton}
+                style={[
+                  styles.modalCloseButton,
+                  { backgroundColor: theme.primaryButtonBg },
+                ]}
                 onPress={() => router.replace('/')}
               >
-                <Text style={styles.modalCloseButtonText}>
+                <Text
+                  style={[
+                    styles.modalCloseButtonText,
+                    { color: theme.primaryButtonText },
+                  ]}
+                >
                   KEMBALI KE DIREKTORI
                 </Text>
               </TouchableOpacity>
@@ -663,36 +902,38 @@ const styles = StyleSheet.create({
   topRightActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 6,
+  },
+  themeButton: {
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  themeButtonText: {
+    fontSize: 14,
   },
   modeButton: {
-    backgroundColor: '#1e293b',
-    borderColor: '#334155',
     borderWidth: 1,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     paddingVertical: 6,
     borderRadius: 12,
   },
-  modeButtonActive: {
-    backgroundColor: '#1e3a8a',
-    borderColor: '#3b82f6',
-  },
+  modeButtonActive: {},
   modeButtonText: {
-    color: '#93c5fd',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
   },
   langButton: {
-    backgroundColor: '#1a231c',
-    borderColor: '#2d3d30',
     borderWidth: 1,
-    paddingHorizontal: 10,
+    paddingHorizontal: 8,
     paddingVertical: 6,
     borderRadius: 12,
   },
   langButtonText: {
-    color: '#f3f4f6',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
   },
   exitButton: {
@@ -709,10 +950,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   turnCard: {
-    backgroundColor: '#102216',
-    borderColor: '#1f482d',
     borderWidth: 1.5,
-    borderRadius: 18,
+    borderRadius: 14,
     padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
@@ -722,10 +961,8 @@ const styles = StyleSheet.create({
   turnIconBox: {
     width: 50,
     height: 50,
-    backgroundColor: '#162b1d',
-    borderColor: '#244830',
     borderWidth: 1,
-    borderRadius: 14,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -778,16 +1015,13 @@ const styles = StyleSheet.create({
   },
   hudCard: {
     width: '48%',
-    backgroundColor: '#111713',
-    borderColor: '#1e2c22',
     borderWidth: 1,
-    borderRadius: 16,
+    borderRadius: 12,
     padding: 16,
     alignItems: 'center',
   },
   hudLabel: {
     fontSize: 10,
-    color: '#6b7280',
     fontWeight: '700',
     letterSpacing: 0.5,
     marginBottom: 4,
@@ -795,16 +1029,13 @@ const styles = StyleSheet.create({
   hudTimer: {
     fontSize: 28,
     fontWeight: '900',
-    color: '#34d399',
   },
   hudMetric: {
     fontSize: 24,
     fontWeight: '900',
-    color: '#ffffff',
   },
   hudSub: {
     fontSize: 11,
-    color: '#9ca3af',
     marginTop: 4,
   },
   progressContainer: {
@@ -812,18 +1043,15 @@ const styles = StyleSheet.create({
   },
   progressBarBackground: {
     height: 10,
-    backgroundColor: '#17221a',
     borderRadius: 5,
     overflow: 'hidden',
   },
   progressBarFill: {
     height: '100%',
-    backgroundColor: '#10b981',
     borderRadius: 5,
   },
   progressLabel: {
     fontSize: 11,
-    color: '#9ca3af',
     textAlign: 'center',
     marginTop: 6,
   },
@@ -832,22 +1060,18 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   pauseButton: {
-    backgroundColor: '#27272a',
-    borderRadius: 14,
+    borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
   },
-  resumeButton: {
-    backgroundColor: '#047857',
-  },
+  resumeButton: {},
   pauseButtonText: {
-    color: '#f3f4f6',
     fontWeight: 'bold',
     fontSize: 15,
   },
   finishButton: {
     backgroundColor: '#dc2626',
-    borderRadius: 14,
+    borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
   },
@@ -858,16 +1082,13 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.85)',
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
   },
   modalCard: {
-    backgroundColor: '#111713',
-    borderColor: '#243b2b',
-    borderWidth: 1.5,
-    borderRadius: 24,
+    borderWidth: 1,
+    borderRadius: 16,
     padding: 24,
     width: '100%',
     alignItems: 'center',
@@ -879,12 +1100,10 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 22,
     fontWeight: '900',
-    color: '#34d399',
     textAlign: 'center',
   },
   modalSubtitle: {
     fontSize: 14,
-    color: '#d1fae5',
     textAlign: 'center',
     marginTop: 6,
     marginBottom: 20,
@@ -893,8 +1112,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
-    backgroundColor: '#17221a',
-    borderRadius: 16,
+    borderRadius: 12,
     padding: 16,
     marginBottom: 24,
   },
@@ -903,31 +1121,25 @@ const styles = StyleSheet.create({
   },
   modalStatLabel: {
     fontSize: 11,
-    color: '#9ca3af',
     marginBottom: 4,
   },
   modalStatVal: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#ffffff',
   },
   modalCloseButton: {
-    backgroundColor: '#10b981',
-    borderRadius: 14,
+    borderRadius: 12,
     paddingVertical: 14,
     width: '100%',
     alignItems: 'center',
   },
   modalCloseButtonText: {
-    color: '#062817',
     fontWeight: '800',
     fontSize: 14,
   },
   liveTrackerBox: {
-    backgroundColor: '#0a110c',
-    borderColor: '#19281e',
     borderWidth: 1,
-    borderRadius: 18,
+    borderRadius: 14,
     height: 205,
     marginVertical: 10,
     justifyContent: 'center',
@@ -936,10 +1148,8 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   modalArtworkBox: {
-    backgroundColor: '#0a110c',
-    borderColor: '#19281e',
     borderWidth: 1,
-    borderRadius: 16,
+    borderRadius: 12,
     height: 165,
     marginVertical: 14,
     justifyContent: 'center',

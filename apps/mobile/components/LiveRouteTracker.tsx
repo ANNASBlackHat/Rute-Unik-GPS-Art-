@@ -2,6 +2,7 @@ import React, { useMemo } from 'react';
 import { View, StyleSheet, Text } from 'react-native';
 import Svg, { Polyline, Circle } from 'react-native-svg';
 import { createRouteProjector } from '@rute-unik/shared';
+import { useTheme } from '../services/themeContext';
 
 export interface LiveRouteTrackerProps {
   routeCoords: [number, number][];
@@ -75,33 +76,40 @@ export function LiveRouteTracker({
     };
   }, [routeCoords, runnerLocation, closestIndex, size]);
 
+  const { theme, mode } = useTheme();
+
   if (!routeCoords || routeCoords.length < 2) {
     return (
       <View style={[styles.container, { width: size, height: size }]}>
-        <Text style={styles.emptyText}>Memuat jalur rute...</Text>
+        <Text style={[styles.emptyText, { color: theme.inkMuted }]}>
+          Memuat jalur rute...
+        </Text>
       </View>
     );
   }
 
+  const uncompletedStroke = theme.uncompletedTrack;
+  const completedStroke = mode === 'light' ? theme.ink : theme.routeStroke;
+
   return (
     <View style={[styles.container, { width: size, height: size }]}>
       <Svg viewBox={viewBox} width={size} height={size}>
-        {/* Full route silhouette in muted dark green track */}
+        {/* Full route silhouette */}
         <Polyline
           points={fullPathPoints}
           fill="none"
-          stroke="#1d3023"
+          stroke={uncompletedStroke}
           strokeWidth={4}
           strokeLinecap="round"
           strokeLinejoin="round"
         />
 
-        {/* Completed portion in glowing neon emerald */}
+        {/* Completed portion */}
         {completedPoints ? (
           <Polyline
             points={completedPoints}
             fill="none"
-            stroke="#34d399"
+            stroke={completedStroke}
             strokeWidth={4.8}
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -115,7 +123,7 @@ export function LiveRouteTracker({
             cy={startPos[1]}
             r={4.5}
             fill="#10b981"
-            stroke="#ffffff"
+            stroke={theme.chalk}
             strokeWidth={1.5}
           />
         ) : null}
@@ -127,7 +135,7 @@ export function LiveRouteTracker({
             cy={finishPos[1]}
             r={4.5}
             fill="#ef4444"
-            stroke="#ffffff"
+            stroke={theme.chalk}
             strokeWidth={1.5}
           />
         ) : null}
@@ -155,10 +163,29 @@ export function LiveRouteTracker({
       </Svg>
 
       {/* Runner Legend Bar */}
-      <View style={styles.legendBar}>
+      <View
+        style={[
+          styles.legendBar,
+          {
+            backgroundColor:
+              mode === 'light'
+                ? 'rgba(247, 245, 239, 0.95)'
+                : 'rgba(10, 16, 12, 0.85)',
+            borderColor: theme.cardBorder,
+            borderWidth: 1,
+          },
+        ]}
+      >
         <View style={styles.legendItem}>
           <View style={[styles.legendDot, { backgroundColor: '#10b981' }]} />
-          <Text style={styles.legendText}>Start</Text>
+          <Text
+            style={[
+              styles.legendText,
+              { color: mode === 'light' ? theme.ink : '#d1fae5' },
+            ]}
+          >
+            Start
+          </Text>
         </View>
         <View style={styles.legendItem}>
           <View
@@ -167,13 +194,25 @@ export function LiveRouteTracker({
               { backgroundColor: isOffRoute ? '#ef4444' : '#38bdf8' },
             ]}
           />
-          <Text style={styles.legendText}>
+          <Text
+            style={[
+              styles.legendText,
+              { color: mode === 'light' ? theme.ink : '#d1fae5' },
+            ]}
+          >
             {isOffRoute ? 'Keluar Rute' : 'Posisi Anda'}
           </Text>
         </View>
         <View style={styles.legendItem}>
           <View style={[styles.legendDot, { backgroundColor: '#ef4444' }]} />
-          <Text style={styles.legendText}>Finish</Text>
+          <Text
+            style={[
+              styles.legendText,
+              { color: mode === 'light' ? theme.ink : '#d1fae5' },
+            ]}
+          >
+            Finish
+          </Text>
         </View>
       </View>
     </View>

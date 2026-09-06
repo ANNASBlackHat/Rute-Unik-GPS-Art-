@@ -20,10 +20,12 @@ import {
   fetchLiveCities,
   MobileRouteItem,
 } from '../services/routeService';
+import { useTheme } from '../services/themeContext';
 import { RouteShapePreview } from '../components/RouteShapePreview';
 
 export default function DirectoryScreen() {
   const router = useRouter();
+  const { theme, mode, toggleTheme } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCity, setSelectedCity] = useState('all');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -74,25 +76,49 @@ export default function DirectoryScreen() {
   }, [routes, searchQuery, selectedCity, selectedCategory]);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, { backgroundColor: theme.paper }]}>
       <View style={styles.container}>
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.title}>RUTE UNIK</Text>
-            <Text style={styles.subtitle}>GPS Art Running Directory</Text>
+            <Text style={[styles.title, { color: theme.ink }]}>RUTE UNIK</Text>
+            <Text style={[styles.subtitle, { color: theme.inkMuted }]}>
+              GPS Art Running Directory
+            </Text>
           </View>
-          <View style={styles.badgeContainer}>
-            <Text style={styles.badgeText}>Mobile Run</Text>
+          <View style={styles.headerRight}>
+            {/* 1-Tap Theme Toggle */}
+            <TouchableOpacity
+              style={[
+                styles.themeToggle,
+                {
+                  backgroundColor: theme.chalk,
+                  borderColor: theme.cardBorder,
+                },
+              ]}
+              onPress={toggleTheme}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.themeToggleText, { color: theme.ink }]}>
+                {mode === 'light' ? '☀️ Paper' : '🌙 AMOLED'}
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
 
         {/* Search Input */}
         <View style={styles.searchContainer}>
           <TextInput
-            style={styles.searchInput}
+            style={[
+              styles.searchInput,
+              {
+                backgroundColor: theme.searchBg,
+                borderColor: theme.searchBorder,
+                color: theme.ink,
+              },
+            ]}
             placeholder="Cari rute (kucing, bintang, dago)..."
-            placeholderTextColor="#68726b"
+            placeholderTextColor={theme.inkMuted}
             value={searchQuery}
             onChangeText={setSearchQuery}
             clearButtonMode="while-editing"
@@ -111,11 +137,28 @@ export default function DirectoryScreen() {
               return (
                 <TouchableOpacity
                   key={city}
-                  style={[styles.chip, active && styles.chipActive]}
+                  style={[
+                    styles.chip,
+                    {
+                      backgroundColor: active
+                        ? theme.chipActiveBg
+                        : theme.chipBg,
+                      borderColor: active
+                        ? theme.chipActiveBorder
+                        : theme.chipBorder,
+                    },
+                  ]}
                   onPress={() => setSelectedCity(city)}
                 >
                   <Text
-                    style={[styles.chipText, active && styles.chipTextActive]}
+                    style={[
+                      styles.chipText,
+                      {
+                        color: active
+                          ? theme.chipTextActive
+                          : theme.chipText,
+                      },
+                    ]}
                   >
                     {city === 'all' ? 'Semua Kota' : city}
                   </Text>
@@ -137,11 +180,28 @@ export default function DirectoryScreen() {
               return (
                 <TouchableOpacity
                   key={cat.id}
-                  style={[styles.chip, active && styles.chipActive]}
+                  style={[
+                    styles.chip,
+                    {
+                      backgroundColor: active
+                        ? theme.chipActiveBg
+                        : theme.chipBg,
+                      borderColor: active
+                        ? theme.chipActiveBorder
+                        : theme.chipBorder,
+                    },
+                  ]}
                   onPress={() => setSelectedCategory(cat.id)}
                 >
                   <Text
-                    style={[styles.chipText, active && styles.chipTextActive]}
+                    style={[
+                      styles.chipText,
+                      {
+                        color: active
+                          ? theme.chipTextActive
+                          : theme.chipText,
+                      },
+                    ]}
                   >
                     {cat.label}
                   </Text>
@@ -160,19 +220,19 @@ export default function DirectoryScreen() {
             <RefreshControl
               refreshing={isRefreshing}
               onRefresh={() => loadData(true)}
-              tintColor="#10b981"
+              tintColor={theme.trailOrange}
             />
           }
         >
           {isLoading && !isRefreshing ? (
             <View style={{ paddingVertical: 40, alignItems: 'center' }}>
-              <ActivityIndicator size="large" color="#10b981" />
-              <Text style={{ color: '#9ca3af', marginTop: 12, fontSize: 13 }}>
+              <ActivityIndicator size="large" color={theme.trailOrange} />
+              <Text style={{ color: theme.inkMuted, marginTop: 12, fontSize: 13 }}>
                 Memuat rute dari database...
               </Text>
             </View>
           ) : (
-            <Text style={styles.resultsCount}>
+            <Text style={[styles.resultsCount, { color: theme.inkMuted }]}>
               Menampilkan {filteredRoutes.length} rute GPS Art
             </Text>
           )}
@@ -180,56 +240,129 @@ export default function DirectoryScreen() {
           {filteredRoutes.map((route: MobileRouteItem) => (
             <TouchableOpacity
               key={route.id}
-              style={styles.card}
+              style={[
+                styles.card,
+                {
+                  backgroundColor: theme.chalk,
+                  borderColor: theme.cardBorder,
+                },
+              ]}
               activeOpacity={0.8}
               onPress={() => router.push(`/route/${route.id}`)}
             >
               <View style={styles.cardHeader}>
                 <View>
-                  <Text style={styles.cardTitle}>{route.name}</Text>
-                  <Text style={styles.cardCity}>{route.city}</Text>
+                  <Text style={[styles.cardTitle, { color: theme.ink }]}>
+                    {route.name}
+                  </Text>
+                  <Text style={[styles.cardCity, { color: theme.inkMuted }]}>
+                    {route.city}
+                  </Text>
                 </View>
-                <View style={styles.categoryBadge}>
-                  <Text style={styles.categoryBadgeText}>
+                <View
+                  style={[
+                    styles.categoryBadge,
+                    {
+                      backgroundColor: theme.badgeBg,
+                      borderColor: theme.badgeBorder,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.categoryBadgeText,
+                      { color: theme.badgeText },
+                    ]}
+                  >
                     {route.shapeCategory.toUpperCase()}
                   </Text>
                 </View>
               </View>
 
               {/* GPS Art Shape Visual Preview */}
-              <View style={styles.shapePreviewBox}>
+              <View
+                style={[
+                  styles.shapePreviewBox,
+                  {
+                    backgroundColor: theme.chalkSubtle,
+                    borderColor: theme.contourTan,
+                  },
+                ]}
+              >
                 <RouteShapePreview
                   svgXml={route.thumbnailSvg}
-                  strokeColor="#34d399"
+                  strokeColor={theme.routeStroke}
                   strokeWidth={3.5}
                   size={120}
                   fallbackLabel={route.name}
                 />
-                <View style={styles.shapeBadgeOverlay}>
-                  <Text style={styles.shapeBadgeText}>GPS ART</Text>
+                <View
+                  style={[
+                    styles.shapeBadgeOverlay,
+                    {
+                      backgroundColor:
+                        mode === 'light'
+                          ? 'rgba(247, 245, 239, 0.92)'
+                          : 'rgba(10, 17, 12, 0.85)',
+                      borderColor: theme.cardBorder,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.shapeBadgeText,
+                      {
+                        color:
+                          mode === 'light'
+                            ? theme.trailOrange
+                            : theme.routeStroke,
+                      },
+                    ]}
+                  >
+                    GPS ART
+                  </Text>
                 </View>
               </View>
 
-              <View style={styles.cardFooter}>
+              <View
+                style={[
+                  styles.cardFooter,
+                  { borderTopColor: theme.contourTan },
+                ]}
+              >
                 <View style={styles.statItem}>
-                  <Text style={styles.statLabel}>JARAK</Text>
-                  <Text style={styles.statValue}>
+                  <Text style={[styles.statLabel, { color: theme.inkMuted }]}>
+                    JARAK
+                  </Text>
+                  <Text style={[styles.statValue, { color: theme.ink }]}>
                     {formatDistanceKm(route.distanceMeters)}
                   </Text>
                 </View>
 
                 <View style={styles.statItem}>
-                  <Text style={styles.statLabel}>ELEVASI</Text>
-                  <Text style={styles.statValue}>
+                  <Text style={[styles.statLabel, { color: theme.inkMuted }]}>
+                    ELEVASI
+                  </Text>
+                  <Text style={[styles.statValue, { color: theme.ink }]}>
                     +{route.elevationGainMeters ?? 0}m
                   </Text>
                 </View>
 
                 <TouchableOpacity
-                  style={styles.runButton}
+                  style={[
+                    styles.runButton,
+                    { backgroundColor: theme.primaryButtonBg },
+                  ]}
                   onPress={() => router.push(`/run/${route.id}`)}
                 >
-                  <Text style={styles.runButtonText}>LARI 🏃‍♂️</Text>
+                  <Text
+                    style={[
+                      styles.runButtonText,
+                      { color: theme.primaryButtonText },
+                    ]}
+                  >
+                    LARI 🏃‍♂️
+                  </Text>
                 </TouchableOpacity>
               </View>
             </TouchableOpacity>
@@ -259,36 +392,43 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: '900',
-    color: '#e8ece9',
     letterSpacing: 1,
   },
   subtitle: {
     fontSize: 13,
-    color: '#89958d',
     marginTop: 2,
   },
-  badgeContainer: {
-    backgroundColor: '#17231a',
-    borderColor: '#2e4933',
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  themeToggle: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
     borderWidth: 1,
+  },
+  themeToggleText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  badgeContainer: {
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 14,
+    borderRadius: 8,
+    borderWidth: 1,
   },
   badgeText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#34d399',
   },
   searchContainer: {
     marginVertical: 8,
   },
   searchInput: {
-    backgroundColor: '#151b17',
-    borderColor: '#253329',
     borderWidth: 1,
     borderRadius: 12,
-    color: '#f3f4f6',
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 14,
@@ -333,10 +473,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   card: {
-    backgroundColor: '#131915',
-    borderColor: '#202c23',
     borderWidth: 1,
-    borderRadius: 16,
+    borderRadius: 12,
     padding: 16,
     marginBottom: 12,
   },
@@ -349,24 +487,19 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#f9fafb',
   },
   cardCity: {
     fontSize: 13,
-    color: '#9ca3af',
     marginTop: 2,
   },
   categoryBadge: {
-    backgroundColor: '#1c2820',
-    borderColor: '#2d4032',
     borderWidth: 1,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 8,
+    borderRadius: 4,
   },
   categoryBadgeText: {
     fontSize: 10,
-    color: '#6ee7b7',
     fontWeight: '700',
   },
   cardFooter: {
@@ -375,7 +508,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: '#1d2620',
   },
   statItem: {
     flexDirection: 'column',
@@ -392,21 +524,17 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   runButton: {
-    backgroundColor: '#10b981',
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 10,
+    borderRadius: 8,
   },
   runButtonText: {
-    color: '#062817',
     fontWeight: '800',
     fontSize: 12,
   },
   shapePreviewBox: {
-    backgroundColor: '#0a110c',
-    borderColor: '#19281e',
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: 8,
     height: 140,
     marginVertical: 10,
     padding: 8,
