@@ -4,7 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { Link, useRouter, usePathname } from '@/i18n/routing';
 import { useTranslations } from 'next-intl';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Smartphone } from 'lucide-react';
+import { APK_DOWNLOAD_CONFIG } from '@/config/appDownload';
+import { ApkDownloadModal } from './ApkDownloadModal';
 
 interface NavUser {
   id: string;
@@ -15,9 +17,11 @@ interface NavUser {
 
 export function Navbar(_props?: { locale?: string }) {
   const t = useTranslations('common');
+  const tApk = useTranslations('apkDownload');
   const router = useRouter();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [showApkModal, setShowApkModal] = useState(false);
   const [user, setUser] = useState<NavUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [prevPathname, setPrevPathname] = useState(pathname);
@@ -186,11 +190,34 @@ export function Navbar(_props?: { locale?: string }) {
             )}
           </nav>
 
+          {APK_DOWNLOAD_CONFIG.isEnabled && (
+            <button
+              type="button"
+              id="btn-navbar-download-apk"
+              onClick={() => setShowApkModal(true)}
+              className="inline-flex items-center gap-1.5 font-display text-xs uppercase tracking-wider px-3 py-1.5 rounded-[4px] border border-trail-orange/80 bg-trail-orange/10 text-trail-orange hover:bg-trail-orange hover:text-chalk transition-colors cursor-pointer"
+            >
+              <span>🤖</span>
+              <span>{tApk('navButton')}</span>
+            </button>
+          )}
+
           <LanguageSwitcher />
         </div>
 
         {/* Mobile Right Controls: Language Switcher + Hamburger */}
         <div className="flex md:hidden items-center gap-2">
+          {APK_DOWNLOAD_CONFIG.isEnabled && (
+            <button
+              type="button"
+              id="btn-mobile-top-download-apk"
+              onClick={() => setShowApkModal(true)}
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-[4px] border border-trail-orange/80 bg-trail-orange/10 text-trail-orange font-display text-xs uppercase cursor-pointer"
+            >
+              <span>🤖</span>
+              <span className="hidden xs:inline">{tApk('navButton')}</span>
+            </button>
+          )}
           <LanguageSwitcher />
           <button
             type="button"
@@ -219,6 +246,24 @@ export function Navbar(_props?: { locale?: string }) {
           className="md:hidden border-t border-contour-tan bg-chalk px-4 py-4 space-y-3 shadow-md animate-in slide-in-from-top-2 duration-150"
         >
           <nav className="flex flex-col space-y-1 text-sm font-display uppercase tracking-wider text-ink">
+            {APK_DOWNLOAD_CONFIG.isEnabled && (
+              <button
+                type="button"
+                id="btn-mobile-drawer-download-apk"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  setShowApkModal(true);
+                }}
+                className="w-full text-left px-3 py-2.5 mb-2 rounded-[4px] flex items-center justify-between text-trail-orange bg-trail-orange/10 border border-trail-orange/30 font-display text-xs uppercase tracking-wider transition-colors cursor-pointer"
+              >
+                <span className="flex items-center gap-2">
+                  <span>🤖</span>
+                  <span>{tApk('navButton')} Android</span>
+                </span>
+                <span className="text-[10px] font-data font-bold px-1.5 py-0.5 rounded bg-trail-orange/20 text-trail-orange">Expo APK</span>
+              </button>
+            )}
+
             <Link
               href="/"
               onClick={() => setMobileMenuOpen(false)}
@@ -275,7 +320,7 @@ export function Navbar(_props?: { locale?: string }) {
                   <button
                     type="button"
                     onClick={handleLogout}
-                    className="w-full text-left px-3 py-2.5 rounded-[4px] text-ink/70 hover:text-ink hover:bg-paper/60 transition-colors uppercase font-display"
+                    className="w-full text-left px-3 py-2.5 rounded-[4px] text-ink/70 hover:text-ink hover:bg-paper/60 transition-colors uppercase font-display cursor-pointer"
                   >
                     {t('logout')}
                   </button>
@@ -299,6 +344,12 @@ export function Navbar(_props?: { locale?: string }) {
           </nav>
         </div>
       )}
+
+      {/* Global APK Download Modal */}
+      <ApkDownloadModal
+        isOpen={showApkModal}
+        onClose={() => setShowApkModal(false)}
+      />
     </header>
   );
 }

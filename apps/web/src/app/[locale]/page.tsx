@@ -42,6 +42,7 @@ import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { RouteItem } from '@/components/directory/RouteCard';
 import { CityOption } from '@/components/directory/CityFilter';
+import { ApkHomeBanner } from '@/components/directory/ApkHomeBanner';
 import { inferShapeCategory, type ShapeCategory } from '@/lib/shape-category';
 import { extractElevationSamples } from '@/lib/geo';
 
@@ -172,6 +173,11 @@ export default async function HomePage({
         <p className="text-ink/80 font-body text-base leading-relaxed">
           {t('subtitle')}
         </p>
+      </section>
+
+      {/* Android Mobile App Promotion Banner */}
+      <section className="max-w-4xl mx-auto">
+        <ApkHomeBanner />
       </section>
 
       {/* Directory & Catalog Grid */}

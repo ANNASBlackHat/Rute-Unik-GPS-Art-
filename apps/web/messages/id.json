@@ -205,5 +205,29 @@
   "cities": {
     "title": "Rute Lari GPS-Art di {city}",
     "description": "{count} rute lari GPS-art di {city} - jelajahi peta, jarak, dan elevasi, lalu unduh GPX untuk larimu sendiri."
+  },
+  "apkDownload": {
+    "navButton": "Unduh APK",
+    "badge": "Aplikasi Android (Expo)",
+    "modalTitle": "Gunakan Aplikasi Android untuk Pengalaman Terbaik",
+    "modalSubtitle": "Panduan Suara Turn-by-Turn & GPS Layar Mati",
+    "webLimitationTitle": "Keterbatasan Browser Web",
+    "webLimitationText": "Browser web tidak dapat melacak GPS di latar belakang saat layar mati atau HP dikantongi, serta tidak dapat mengecilkan musik untuk suara belokan.",
+    "appBenefit1": "Layar bisa dimatikan / dikantongi (hemat baterai)",
+    "appBenefit2": "Panduan suara turn-by-turn otomatis di earphone",
+    "appBenefit3": "Audio ducking (musik mengecil saat suara pemandu bicara)",
+    "appBenefit4": "Alarm getar & suara instan jika keluar dari bentuk GPS Art",
+    "manualInstallNotice": "Pemasangan Manual (APK dari Expo)",
+    "manualInstallDesc": "File APK ini di-build resmi via Expo (bukan lewat Google Play Store). Ikuti langkah berikut untuk memasang:",
+    "step1": "Ketuk tombol \"Unduh APK Android\" di bawah.",
+    "step2": "Buka file APK yang telah diunduh dari bilah notifikasi atau folder Unduhan (Downloads).",
+    "step3": "Jika muncul notifikasi keamanan Android, pilih \"Pengaturan\" dan aktifkan \"Izinkan dari sumber ini\" (Install unknown apps).",
+    "step4": "Ketuk \"Pasang / Install\", lalu buka aplikasi dan izinkan akses lokasi (GPS).",
+    "downloadCta": "Unduh APK Android (Expo)",
+    "continueWeb": "Tetap Lanjut di Browser Web",
+    "close": "Tutup",
+    "homeBannerTitle": "Lari GPS Art Lebih Nyaman dengan Aplikasi Android",
+    "homeBannerDesc": "Dapatkan panduan suara turn-by-turn di latar belakang dan pelacakan GPS akurasi tinggi saat layar HP mati. Unduh gratis file APK via Expo.",
+    "homeBannerBtn": "Unduh Aplikasi Android (APK)"
   }
 }

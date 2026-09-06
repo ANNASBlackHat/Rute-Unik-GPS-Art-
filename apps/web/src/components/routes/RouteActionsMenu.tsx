@@ -5,8 +5,10 @@ import { StartRunButton } from './StartRunButton';
 import { ShareButton } from './ShareButton';
 import { DownloadImageButton } from './DownloadImageButton';
 import { VideoExportButton } from '@/components/video/VideoExportButton';
-import { Download, Share2, ChevronDown, ChevronUp } from 'lucide-react';
+import { Download, Share2, ChevronDown, ChevronUp, Smartphone } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { APK_DOWNLOAD_CONFIG } from '@/config/appDownload';
+import { ApkDownloadModal } from '@/components/layout/ApkDownloadModal';
 
 interface RouteActionsMenuProps {
   routeId: string;
@@ -29,10 +31,11 @@ export function RouteActionsMenu({
 }: RouteActionsMenuProps) {
   const t = useTranslations('routeDetail');
   const [showExports, setShowExports] = useState(false);
+  const [showApkModal, setShowApkModal] = useState(false);
 
   return (
     <div className="pt-2 space-y-3">
-      {/* 1. Primary Action: Start Run */}
+      {/* 1. Primary Action: Start Run (with APK recommendation modal) */}
       <StartRunButton routeId={routeId} />
 
       {/* 2. Secondary Action: Download GPX */}
@@ -43,6 +46,19 @@ export function RouteActionsMenu({
       >
         <Download size={16} strokeWidth={1.5} aria-hidden="true" /> {t('downloadGpx')}
       </a>
+
+      {/* 3. Mobile App APK Download Option */}
+      {APK_DOWNLOAD_CONFIG.isEnabled && (
+        <button
+          type="button"
+          id="btn-route-download-apk"
+          onClick={() => setShowApkModal(true)}
+          className="w-full inline-flex items-center justify-center gap-2 font-display tracking-wider uppercase text-xs px-4 py-2.5 rounded-[4px] border border-trail-orange/60 bg-trail-orange/10 text-trail-orange hover:bg-trail-orange hover:text-chalk transition-colors cursor-pointer select-none"
+        >
+          <Smartphone size={15} strokeWidth={1.8} aria-hidden="true" />
+          <span>Unduh APK Android (Expo)</span>
+        </button>
+      )}
 
       {/* 3. Consolidated Export & Share Section */}
       <div className="border border-contour-tan/70 rounded-[4px] bg-paper/30 overflow-hidden">
@@ -99,6 +115,12 @@ export function RouteActionsMenu({
           </div>
         )}
       </div>
+
+      {/* APK Download Modal */}
+      <ApkDownloadModal
+        isOpen={showApkModal}
+        onClose={() => setShowApkModal(false)}
+      />
     </div>
   );
 }

@@ -205,5 +205,29 @@
   "cities": {
     "title": "GPS-Art Running Routes in {city}",
     "description": "{count} GPS-art running route(s) in {city} - browse the map, distance and elevation, then download the GPX to run it yourself."
+  },
+  "apkDownload": {
+    "navButton": "Download APK",
+    "badge": "Android App (Expo)",
+    "modalTitle": "Use the Android App for the Best Experience",
+    "modalSubtitle": "Turn-by-Turn Voice Guidance & Screen-Off GPS",
+    "webLimitationTitle": "Web Browser Limitations",
+    "webLimitationText": "Web browsers cannot track GPS in the background when the phone screen is locked or in your pocket, nor duck music for voice cues.",
+    "appBenefit1": "Screen can be locked / in pocket (saves battery)",
+    "appBenefit2": "Automatic turn-by-turn voice prompts in your earphones",
+    "appBenefit3": "Audio ducking (lowers music during voice navigation)",
+    "appBenefit4": "Instant vibration & audio alert if straying from the GPS Art shape",
+    "manualInstallNotice": "Manual APK Installation Guide",
+    "manualInstallDesc": "This APK is built officially via Expo (outside Google Play Store). Follow these steps to install on your Android device:",
+    "step1": "Tap the \"Download Android APK\" button below.",
+    "step2": "Open the downloaded APK file from your notification bar or Downloads folder.",
+    "step3": "If an Android security prompt appears, select \"Settings\" and enable \"Allow from this source\" (Install unknown apps).",
+    "step4": "Tap \"Install\", launch Rute Unik, and grant location permission.",
+    "downloadCta": "Download Android APK (Expo)",
+    "continueWeb": "Continue in Web Browser",
+    "close": "Close",
+    "homeBannerTitle": "Run GPS Art Hands-Free with the Android App",
+    "homeBannerDesc": "Get turn-by-turn audio guidance in the background and high-accuracy GPS tracking with your phone screen locked. Free APK via Expo.",
+    "homeBannerBtn": "Download Android APK (APK)"
   }
 }
