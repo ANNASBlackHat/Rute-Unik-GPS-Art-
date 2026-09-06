@@ -31,8 +31,10 @@ import {
   NativeExpoLocationAdapter,
   NativeExpoSpeechEngine,
 } from '../../services/expoAdapters';
+import { TurnType } from '@rute-unik/shared';
 import { LiveRouteTracker } from '../../components/LiveRouteTracker';
 import { RouteShapePreview } from '../../components/RouteShapePreview';
+import { TurnDirectionIcon } from '../../components/TurnDirectionIcon';
 
 export default function RunModeScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -64,7 +66,13 @@ export default function RunModeScreen() {
   const [distanceCoveredMeters, setDistanceCoveredMeters] = useState(0);
   const [isOffRoute, setIsOffRoute] = useState(false);
   const [currentPace, setCurrentPace] = useState('-:--');
-  const [upcomingTurn, setUpcomingTurn] = useState({
+  const [upcomingTurn, setUpcomingTurn] = useState<{
+    turnType: TurnType | 'start' | 'finish' | 'off_route';
+    direction: string;
+    distanceMeters: number;
+    instruction: string;
+  }>({
+    turnType: 'start',
     direction: 'Mulai Lari',
     distanceMeters: 0,
     instruction: 'Menunggu pergerakan pertama...',
@@ -135,6 +143,7 @@ export default function RunModeScreen() {
 
       if (result.nextTurnCue && result.distanceToNextTurnMeters !== null) {
         setUpcomingTurn({
+          turnType: result.nextTurnCue.turnType,
           direction:
             language === 'id'
               ? result.nextTurnCue.instructions.id.action
@@ -149,6 +158,15 @@ export default function RunModeScreen() {
 
       if (result.nextState?.isCompleted) {
         setIsCompleted(true);
+        setUpcomingTurn({
+          turnType: 'finish',
+          direction: language === 'id' ? 'Selesai!' : 'Finished!',
+          distanceMeters: 0,
+          instruction:
+            language === 'id'
+              ? 'Anda berhasil mencapai garis finish!'
+              : 'You have reached the finish line!',
+        });
       }
     },
     [language]
@@ -397,12 +415,34 @@ export default function RunModeScreen() {
         >
           {/* Turn Guidance Live Card */}
           <View style={styles.turnCard}>
-            <View style={styles.turnIconBox}>
-              <Text style={styles.turnIconText}>➡️</Text>
+            <View
+              style={[
+                styles.turnIconBox,
+                isOffRoute && styles.turnIconBoxOffRoute,
+                upcomingTurn.turnType === 'finish' && styles.turnIconBoxFinish,
+              ]}
+            >
+              <TurnDirectionIcon
+                turnType={isOffRoute ? 'off_route' : upcomingTurn.turnType}
+                size={32}
+                color={
+                  isOffRoute
+                    ? '#ef4444'
+                    : upcomingTurn.turnType === 'finish'
+                      ? '#10b981'
+                      : upcomingTurn.turnType === 'u_turn'
+                        ? '#f59e0b'
+                        : '#34d399'
+                }
+                strokeWidth={3.8}
+              />
             </View>
             <View style={styles.turnTextBox}>
               <Text style={styles.turnDistanceText}>
-                {upcomingTurn.direction} dlm {upcomingTurn.distanceMeters}m
+                {upcomingTurn.direction}
+                {upcomingTurn.distanceMeters > 0
+                  ? ` dlm ${upcomingTurn.distanceMeters}m`
+                  : ''}
               </Text>
               <Text style={styles.turnInstructionText}>
                 {upcomingTurn.instruction}
@@ -680,15 +720,22 @@ const styles = StyleSheet.create({
     marginVertical: 10,
   },
   turnIconBox: {
-    width: 48,
-    height: 48,
-    backgroundColor: '#1b3e27',
-    borderRadius: 12,
+    width: 50,
+    height: 50,
+    backgroundColor: '#162b1d',
+    borderColor: '#244830',
+    borderWidth: 1,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  turnIconText: {
-    fontSize: 24,
+  turnIconBoxOffRoute: {
+    backgroundColor: '#2b1212',
+    borderColor: '#5c1d1d',
+  },
+  turnIconBoxFinish: {
+    backgroundColor: '#12331f',
+    borderColor: '#1d5e37',
   },
   turnTextBox: {
     flex: 1,

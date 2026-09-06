@@ -276,4 +276,22 @@ describe('Turn-by-Turn Navigation Engine', () => {
       assert.strictEqual(Math.round(topMid[1]), 20);
     });
   });
+
+  describe('getTurnEmoji (Directional Glyph Mapping)', () => {
+    it('returns appropriate directional arrows for maneuvers', () => {
+      const { getTurnEmoji } = require('../src/navigation');
+      assert.strictEqual(getTurnEmoji('right'), '➡️');
+      assert.strictEqual(getTurnEmoji('left'), '⬅️');
+      assert.strictEqual(getTurnEmoji('slight_right'), '↗️');
+      assert.strictEqual(getTurnEmoji('slight_left'), '↖️');
+      assert.strictEqual(getTurnEmoji('sharp_right'), '↪️');
+      assert.strictEqual(getTurnEmoji('sharp_left'), '↩️');
+      assert.strictEqual(getTurnEmoji('u_turn'), '🔄');
+      assert.strictEqual(getTurnEmoji('straight'), '⬆️');
+      assert.strictEqual(getTurnEmoji('start'), '🏃‍♂️');
+      assert.strictEqual(getTurnEmoji('finish'), '🏁');
+      assert.strictEqual(getTurnEmoji('off_route'), '⚠️');
+      assert.strictEqual(getTurnEmoji('unknown'), '➡️');
+    });
+  });
 });

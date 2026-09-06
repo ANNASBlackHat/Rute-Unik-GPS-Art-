@@ -21,6 +21,40 @@ export interface LocalizedInstruction {
   };
 }
 
+/**
+ * Maps turn maneuvers to visual directional glyphs
+ */
+export function getTurnEmoji(
+  turnType?: TurnType | 'start' | 'finish' | 'off_route' | string
+): string {
+  switch (turnType) {
+    case 'right':
+      return '➡️';
+    case 'left':
+      return '⬅️';
+    case 'slight_right':
+      return '↗️';
+    case 'slight_left':
+      return '↖️';
+    case 'sharp_right':
+      return '↪️';
+    case 'sharp_left':
+      return '↩️';
+    case 'u_turn':
+      return '🔄';
+    case 'straight':
+      return '⬆️';
+    case 'finish':
+      return '🏁';
+    case 'start':
+      return '🏃‍♂️';
+    case 'off_route':
+      return '⚠️';
+    default:
+      return '➡️';
+  }
+}
+
 export interface TurnCue {
   id: string;
   index: number; // coordinate index in original polyline
