@@ -202,7 +202,7 @@ export default function DirectoryScreen() {
                   svgXml={route.thumbnailSvg}
                   strokeColor="#34d399"
                   strokeWidth={3.5}
-                  height={130}
+                  size={120}
                   fallbackLabel={route.name}
                 />
                 <View style={styles.shapeBadgeOverlay}>

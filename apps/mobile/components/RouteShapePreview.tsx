@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, StyleSheet, StyleProp, ViewStyle, Text } from 'react-native';
-import { SvgXml } from 'react-native-svg';
+import Svg, { Polyline, Path, Polygon, SvgXml } from 'react-native-svg';
 import { generateThumbnailSvg } from '@rute-unik/shared';
 
 export interface RouteShapePreviewProps {
@@ -8,79 +8,51 @@ export interface RouteShapePreviewProps {
   coordinates?: [number, number][];
   strokeColor?: string;
   strokeWidth?: number;
-  width?: number | string;
-  height?: number | string;
+  size?: number; // Concrete pixel dimension (width & height) for native Canvas rendering
   style?: StyleProp<ViewStyle>;
   fallbackLabel?: string;
   showEndpoints?: boolean;
 }
 
+interface ParsedShape {
+  type: 'polyline' | 'path' | 'polygon' | 'xml';
+  points?: string;
+  d?: string;
+  xml?: string;
+  viewBox: string;
+}
+
 /**
- * Prepares and colors SVG string for high-contrast mobile dark theme.
- * Replaces dark strokes with vibrant neon mint/emerald and ensures proper viewBox scaling.
+ * Extracts vector shape information from SVG markup so it can be rendered
+ * using native React Native SVG primitives (Polyline, Path, Polygon) without XML parsing quirks.
  */
-export function prepareSvgXml(
-  rawXml: string,
-  strokeColor = '#34d399',
-  strokeWidth = 3
-): string {
-  if (!rawXml || typeof rawXml !== 'string') return '';
+export function extractShapeInfo(rawXml: string): ParsedShape | null {
+  if (!rawXml || typeof rawXml !== 'string') return null;
 
-  let xml = rawXml.trim();
+  const xml = rawXml.trim();
+  const viewBoxMatch = xml.match(/viewBox=["']([^"']+)["']/i);
+  const viewBox = viewBoxMatch ? viewBoxMatch[1] : '0 0 200 200';
 
-  // Normalize <svg> tag attributes for flexible scaling
-  xml = xml.replace(/<svg\b([^>]*)>/i, (match, attrs) => {
-    let cleanedAttrs = attrs
-      .replace(/\bwidth="[^"]*"/gi, '')
-      .replace(/\bheight="[^"]*"/gi, '')
-      .trim();
-
-    if (!cleanedAttrs.includes('viewBox')) {
-      cleanedAttrs += ' viewBox="0 0 200 200"';
-    }
-    return `<svg ${cleanedAttrs} width="100%" height="100%">`;
-  });
-
-  // Replace or inject stroke color
-  if (/stroke="[^"]*"/.test(xml)) {
-    xml = xml.replace(/stroke="[^"]*"/g, `stroke="${strokeColor}"`);
-  } else {
-    xml = xml.replace(
-      /<(path|polyline|line|polygon)/g,
-      `<$1 stroke="${strokeColor}"`
-    );
+  // 1. Check for <polyline points="..." />
+  const polylineMatch = xml.match(/<polyline\b[^>]*\bpoints=["']([^"']+)["']/i);
+  if (polylineMatch) {
+    return { type: 'polyline', points: polylineMatch[1].trim(), viewBox };
   }
 
-  // Adjust stroke width if requested
-  if (strokeWidth) {
-    if (/stroke-width="[^"]*"/.test(xml)) {
-      xml = xml.replace(
-        /stroke-width="[^"]*"/g,
-        `stroke-width="${strokeWidth}"`
-      );
-    } else {
-      xml = xml.replace(
-        /<(path|polyline|line|polygon)/g,
-        `<$1 stroke-width="${strokeWidth}"`
-      );
-    }
+  // 2. Check for <path d="..." />
+  const pathMatch = xml.match(/<path\b[^>]*\bd=["']([^"']+)["']/i);
+  if (pathMatch) {
+    return { type: 'path', d: pathMatch[1].trim(), viewBox };
   }
 
-  // Ensure linecap & linejoin are smooth
-  if (!xml.includes('stroke-linecap')) {
-    xml = xml.replace(
-      /<(path|polyline|line)/g,
-      '<$1 stroke-linecap="round" stroke-linejoin="round"'
-    );
+  // 3. Check for <polygon points="..." />
+  const polygonMatch = xml.match(/<polygon\b[^>]*\bpoints=["']([^"']+)["']/i);
+  if (polygonMatch) {
+    return { type: 'polygon', points: polygonMatch[1].trim(), viewBox };
   }
 
-  // Ensure shapes don't fill with solid black/dark background
-  xml = xml.replace(/fill="(?!none)[^"]*"/g, 'fill="none"');
-  if (!xml.includes('fill=')) {
-    xml = xml.replace(/<(path|polyline|polygon)/g, '<$1 fill="none"');
-  }
-
-  return xml;
+  // 4. Fallback to raw XML with normalized viewBox and stroke
+  return { type: 'xml', xml, viewBox };
 }
 
 export function RouteShapePreview({
@@ -88,31 +60,65 @@ export function RouteShapePreview({
   coordinates,
   strokeColor = '#34d399',
   strokeWidth = 3.5,
-  width = '100%',
-  height = '100%',
+  size = 120,
   style,
   fallbackLabel,
   showEndpoints = false,
 }: RouteShapePreviewProps) {
-  const finalSvgXml = useMemo(() => {
+  const shape = useMemo<ParsedShape | null>(() => {
     if (svgXml && svgXml.trim().length > 0) {
-      return prepareSvgXml(svgXml, strokeColor, strokeWidth);
+      return extractShapeInfo(svgXml);
     }
     if (coordinates && coordinates.length >= 2) {
       const generated = generateThumbnailSvg(coordinates, {
         strokeColor,
         strokeWidth,
       });
-      return prepareSvgXml(generated, strokeColor, strokeWidth);
+      return extractShapeInfo(generated);
     }
     return null;
   }, [svgXml, coordinates, strokeColor, strokeWidth]);
 
   return (
     <View style={[styles.container, style]}>
-      {finalSvgXml ? (
-        <View style={styles.svgWrapper}>
-          <SvgXml xml={finalSvgXml} width={width} height={height} />
+      {shape ? (
+        <View style={[styles.svgWrapper, { width: size, height: size }]}>
+          {shape.type === 'polyline' && shape.points ? (
+            <Svg viewBox={shape.viewBox} width={size} height={size}>
+              <Polyline
+                points={shape.points}
+                fill="none"
+                stroke={strokeColor}
+                strokeWidth={strokeWidth}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </Svg>
+          ) : shape.type === 'path' && shape.d ? (
+            <Svg viewBox={shape.viewBox} width={size} height={size}>
+              <Path
+                d={shape.d}
+                fill="none"
+                stroke={strokeColor}
+                strokeWidth={strokeWidth}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </Svg>
+          ) : shape.type === 'polygon' && shape.points ? (
+            <Svg viewBox={shape.viewBox} width={size} height={size}>
+              <Polygon
+                points={shape.points}
+                fill="none"
+                stroke={strokeColor}
+                strokeWidth={strokeWidth}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </Svg>
+          ) : shape.xml ? (
+            <SvgXml xml={shape.xml} width={size} height={size} />
+          ) : null}
         </View>
       ) : (
         <View style={styles.fallbackContainer}>
@@ -141,13 +147,13 @@ export function RouteShapePreview({
 
 const styles = StyleSheet.create({
   container: {
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden',
-  },
-  svgWrapper: {
     width: '100%',
     height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  svgWrapper: {
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -167,9 +173,9 @@ const styles = StyleSheet.create({
   },
   endpointsRow: {
     position: 'absolute',
-    bottom: 8,
-    left: 10,
-    right: 10,
+    bottom: 4,
+    left: 8,
+    right: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     pointerEvents: 'none',
@@ -177,7 +183,7 @@ const styles = StyleSheet.create({
   endpointTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(12, 18, 14, 0.75)',
+    backgroundColor: 'rgba(12, 18, 14, 0.85)',
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 8,

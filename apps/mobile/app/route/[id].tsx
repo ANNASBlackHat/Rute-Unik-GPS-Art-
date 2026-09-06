@@ -81,7 +81,7 @@ export default function RouteDetailScreen() {
                 coordinates={route.coordinates}
                 strokeColor="#34d399"
                 strokeWidth={3.8}
-                height={220}
+                size={200}
                 showEndpoints={true}
                 fallbackLabel={route.name}
               />
