@@ -53,11 +53,10 @@ export class NativeAudioGuide {
       abandonAudioFocus: () => {},
     };
 
-    // Default mock speech engine
+    // Default mock speech engine (native adapter passed from mobile screen)
     this.speechEngine = options?.speechEngine ?? {
       speak: async (_text, opts) => {
         opts.onStart?.();
-        // Simulate speech
         opts.onDone?.();
       },
       stop: () => {},

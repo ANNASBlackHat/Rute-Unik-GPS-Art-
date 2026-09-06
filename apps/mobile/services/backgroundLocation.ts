@@ -29,7 +29,8 @@ export interface BackgroundLocationAdapter {
         notificationBody: string;
         notificationColor?: string;
       };
-    }
+    },
+    onTick?: (loc: LocationData) => void
   ) => Promise<void> | void;
   stopLocationUpdates: (taskName: string) => Promise<void> | void;
   hasStartedLocationUpdates: (taskName: string) => Promise<boolean> | boolean;
@@ -72,16 +73,22 @@ export class BackgroundLocationManager {
     this.isTrackingActive = true;
     this.isPaused = false;
 
-    await this.adapter.startLocationUpdates(BACKGROUND_RUN_TASK_NAME, {
-      accuracy: 6, // BestForNavigation in expo-location
-      timeInterval: 1000,
-      distanceInterval: 1,
-      foregroundService: {
-        notificationTitle: initialNotification.title,
-        notificationBody: initialNotification.body,
-        notificationColor: initialNotification.color ?? '#10B981',
+    await this.adapter.startLocationUpdates(
+      BACKGROUND_RUN_TASK_NAME,
+      {
+        accuracy: 6, // BestForNavigation in expo-location
+        timeInterval: 1000,
+        distanceInterval: 1,
+        foregroundService: {
+          notificationTitle: initialNotification.title,
+          notificationBody: initialNotification.body,
+          notificationColor: initialNotification.color ?? '#10B981',
+        },
       },
-    });
+      (loc) => {
+        this.processIncomingLocation(loc);
+      }
+    );
   }
 
   pause(): void {

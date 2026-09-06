@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,41 +9,220 @@ import {
   Modal,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import * as Location from 'expo-location';
 import {
-  FALLBACK_ROUTES,
   formatDistanceKm,
   formatRunDuration,
+  getRouteDetailWithCoordinates,
 } from '../../services/routeService';
+import {
+  RunSessionController,
+  RunSessionSummary,
+} from '../../services/runSession';
+import {
+  BackgroundLocationManager,
+  LocationData,
+} from '../../services/backgroundLocation';
+import { NativeAudioGuide } from '../../services/nativeAudioService';
+import {
+  NativeExpoLocationAdapter,
+  NativeExpoSpeechEngine,
+} from '../../services/expoAdapters';
 
 export default function RunModeScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
 
-  const route =
-    FALLBACK_ROUTES.find((r) => r.id === id) || FALLBACK_ROUTES[0];
+  const route = useMemo(
+    () => getRouteDetailWithCoordinates(id ?? 'kucing-ugm'),
+    [id]
+  );
 
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [distanceCoveredMeters, setDistanceCoveredMeters] = useState(0);
   const [isOffRoute, setIsOffRoute] = useState(false);
-  const [currentPace, setCurrentPace] = useState('05:30');
+  const [currentPace, setCurrentPace] = useState('-:--');
   const [upcomingTurn, setUpcomingTurn] = useState({
-    direction: 'Belok kanan',
-    distanceMeters: 30,
-    instruction: 'Dalam 30 meter, belok kanan.',
+    direction: 'Mulai Lari',
+    distanceMeters: 0,
+    instruction: 'Menunggu pergerakan pertama...',
   });
   const [isCompleted, setIsCompleted] = useState(false);
   const [language, setLanguage] = useState<'id' | 'en'>('id');
+  const [gpsAccuracy, setGpsAccuracy] = useState<number | null>(null);
+  const [gpsStatus, setGpsStatus] = useState<
+    'requesting' | 'active' | 'denied' | 'simulated'
+  >('requesting');
+  const [isSimulationMode, setIsSimulationMode] = useState(false);
+  const [sessionSummary, setSessionSummary] =
+    useState<RunSessionSummary | null>(null);
 
+  const sessionRef = useRef<RunSessionController | null>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const simStepRef = useRef(0);
+  // Initialize or update the RunSessionController
+  useEffect(() => {
+    const audioGuide = new NativeAudioGuide({
+      config: { language: language === 'id' ? 'id-ID' : 'en-US' },
+      speechEngine: new NativeExpoSpeechEngine(),
+    });
+    const locationManager = new BackgroundLocationManager({
+      adapter: new NativeExpoLocationAdapter(),
+    });
 
-  // Stopwatch timer
+    const controller = new RunSessionController({
+      routeId: route.id,
+      routeName: route.name,
+      routeCoords: route.coordinates,
+      turnCues: route.turnCues,
+      language,
+      audioGuide,
+      locationManager,
+    });
+    sessionRef.current = controller;
+
+    return () => {
+      controller.finishRun().catch(() => {});
+    };
+  }, [route, language]);
+
+  // Handle incoming location update from real GPS or simulation
+  const handleLocationTick = useCallback(
+    (loc: LocationData) => {
+      const controller = sessionRef.current;
+      if (!controller) return;
+
+      const result = controller.handleLocationUpdate(loc);
+      setGpsAccuracy(loc.accuracy);
+      setDistanceCoveredMeters(result.distanceCoveredMeters);
+      setCurrentPace(
+        controller.calculatePaceString(
+          result.distanceCoveredMeters,
+          controller.getElapsedSeconds()
+        )
+      );
+      setIsOffRoute(result.isOffRoute);
+
+      if (result.nextTurnCue && result.distanceToNextTurnMeters !== null) {
+        setUpcomingTurn({
+          direction:
+            language === 'id'
+              ? result.nextTurnCue.instructions.id.action
+              : result.nextTurnCue.instructions.en.action,
+          distanceMeters: Math.round(result.distanceToNextTurnMeters),
+          instruction:
+            language === 'id'
+              ? result.nextTurnCue.instructions.id.advance
+              : result.nextTurnCue.instructions.en.advance,
+        });
+      }
+
+      if (result.nextState?.isCompleted) {
+        setIsCompleted(true);
+      }
+    },
+    [language]
+  );
+
+  // Request real GPS permissions and start tracking
+  useEffect(() => {
+    let isMounted = true;
+    let locationSub: Location.LocationSubscription | null = null;
+
+    async function initGps() {
+      if (isSimulationMode) {
+        setGpsStatus('simulated');
+        return;
+      }
+
+      try {
+        setGpsStatus('requesting');
+        const fg = await Location.requestForegroundPermissionsAsync();
+
+        if (!isMounted) return;
+
+        if (fg.status !== 'granted') {
+          setGpsStatus('denied');
+          Alert.alert(
+            'Izin Lokasi Diperlukan',
+            'Rute Unik membutuhkan akses GPS untuk memandu rute lari dan belokan Anda. Anda dapat mengaktifkannya di Pengaturan, atau mencoba Mode Simulasi untuk pratinjau rute.',
+            [
+              {
+                text: 'Mode Simulasi (Demo)',
+                onPress: () => {
+                  setIsSimulationMode(true);
+                  setGpsStatus('simulated');
+                },
+              },
+              { text: 'Oke', style: 'cancel' },
+            ]
+          );
+          return;
+        }
+
+        setGpsStatus('active');
+        const controller = sessionRef.current;
+        if (controller) {
+          await controller.startRun();
+        }
+
+        locationSub = await Location.watchPositionAsync(
+          {
+            accuracy: Location.Accuracy.BestForNavigation,
+            timeInterval: 1000,
+            distanceInterval: 1,
+          },
+          (loc) => {
+            if (!isMounted) return;
+            handleLocationTick({
+              latitude: loc.coords.latitude,
+              longitude: loc.coords.longitude,
+              accuracy: loc.coords.accuracy ?? 10,
+              altitude: loc.coords.altitude,
+              speed: loc.coords.speed,
+              heading: loc.coords.heading,
+              timestamp: loc.timestamp,
+            });
+          }
+        );
+      } catch {
+        if (!isMounted) return;
+        setGpsStatus('denied');
+      }
+    }
+
+    initGps();
+
+    return () => {
+      isMounted = false;
+      if (locationSub) {
+        locationSub.remove();
+      }
+    };
+  }, [isSimulationMode, handleLocationTick]);
+
+  // Stopwatch timer & optional simulation runner
   useEffect(() => {
     if (!isPaused && !isCompleted) {
       timerRef.current = setInterval(() => {
-        setElapsedSeconds((s) => s + 1);
-        // Simulate progressive distance increase
-        setDistanceCoveredMeters((m) => Math.min(route.distanceMeters, m + 3));
+        const controller = sessionRef.current;
+        if (controller) {
+          setElapsedSeconds(controller.getElapsedSeconds());
+        }
+
+        // If in simulation mode, advance simulated runner along route coords
+        if (isSimulationMode && route.coordinates.length > 0) {
+          simStepRef.current =
+            (simStepRef.current + 1) % route.coordinates.length;
+          const coord = route.coordinates[simStepRef.current];
+          handleLocationTick({
+            longitude: coord[0],
+            latitude: coord[1],
+            accuracy: 4,
+            timestamp: Date.now(),
+          });
+        }
       }, 1000);
     } else {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -52,15 +231,30 @@ export default function RunModeScreen() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isPaused, isCompleted, route.distanceMeters]);
+  }, [
+    isPaused,
+    isCompleted,
+    isSimulationMode,
+    route.coordinates,
+    handleLocationTick,
+  ]);
 
   const completionPercent = Math.min(
     100,
-    Math.round((distanceCoveredMeters / route.distanceMeters) * 100)
+    Math.round(
+      (distanceCoveredMeters / Math.max(1, route.distanceMeters)) * 100
+    )
   );
 
   const togglePause = () => {
-    setIsPaused((p) => !p);
+    const controller = sessionRef.current;
+    if (isPaused) {
+      controller?.resumeRun();
+      setIsPaused(false);
+    } else {
+      controller?.pauseRun();
+      setIsPaused(true);
+    }
   };
 
   const handleFinish = () => {
@@ -72,7 +266,14 @@ export default function RunModeScreen() {
         {
           text: 'Selesai',
           style: 'destructive',
-          onPress: () => setIsCompleted(true),
+          onPress: async () => {
+            const controller = sessionRef.current;
+            if (controller) {
+              const res = await controller.finishRun();
+              setSessionSummary(res);
+            }
+            setIsCompleted(true);
+          },
         },
       ]
     );
@@ -89,7 +290,14 @@ export default function RunModeScreen() {
       'Progres lari saat ini tidak akan disimpan.',
       [
         { text: 'Batal', style: 'cancel' },
-        { text: 'Keluar', style: 'destructive', onPress: () => router.back() },
+        {
+          text: 'Keluar',
+          style: 'destructive',
+          onPress: () => {
+            sessionRef.current?.finishRun().catch(() => {});
+            router.back();
+          },
+        },
       ]
     );
   };
@@ -102,12 +310,41 @@ export default function RunModeScreen() {
           <View>
             <Text style={styles.topRouteName}>{route.name}</Text>
             <View style={styles.gpsRow}>
-              <View style={styles.gpsDot} />
-              <Text style={styles.gpsText}>GPS Aktif • Akurasi ±5m</Text>
+              <View
+                style={[
+                  styles.gpsDot,
+                  gpsStatus === 'active'
+                    ? styles.gpsDotActive
+                    : gpsStatus === 'denied'
+                      ? styles.gpsDotDenied
+                      : styles.gpsDotSim,
+                ]}
+              />
+              <Text style={styles.gpsText}>
+                {gpsStatus === 'active'
+                  ? `GPS Aktif • Akurasi ±${Math.round(gpsAccuracy ?? 5)}m`
+                  : gpsStatus === 'simulated'
+                    ? 'Mode Demo / Simulasi'
+                    : gpsStatus === 'denied'
+                      ? 'Izin Lokasi Belum Diizinkan'
+                      : 'Mencari Sinyal GPS...'}
+              </Text>
             </View>
           </View>
 
           <View style={styles.topRightActions}>
+            <TouchableOpacity
+              style={[
+                styles.modeButton,
+                isSimulationMode && styles.modeButtonActive,
+              ]}
+              onPress={() => setIsSimulationMode((s) => !s)}
+            >
+              <Text style={styles.modeButtonText}>
+                {isSimulationMode ? '🎮 Demo' : '🛰️ GPS'}
+              </Text>
+            </TouchableOpacity>
+
             <TouchableOpacity
               style={styles.langButton}
               onPress={() => setLanguage((l) => (l === 'id' ? 'en' : 'id'))}
@@ -240,18 +477,25 @@ export default function RunModeScreen() {
                 <View style={styles.modalStatItem}>
                   <Text style={styles.modalStatLabel}>Total Waktu</Text>
                   <Text style={styles.modalStatVal}>
-                    {formatRunDuration(elapsedSeconds)}
+                    {formatRunDuration(
+                      sessionSummary?.totalElapsedSeconds ?? elapsedSeconds
+                    )}
                   </Text>
                 </View>
                 <View style={styles.modalStatItem}>
                   <Text style={styles.modalStatLabel}>Total Jarak</Text>
                   <Text style={styles.modalStatVal}>
-                    {formatDistanceKm(distanceCoveredMeters)}
+                    {formatDistanceKm(
+                      sessionSummary?.coveredDistanceMeters ??
+                        distanceCoveredMeters
+                    )}
                   </Text>
                 </View>
                 <View style={styles.modalStatItem}>
                   <Text style={styles.modalStatLabel}>Pace</Text>
-                  <Text style={styles.modalStatVal}>{currentPace}/km</Text>
+                  <Text style={styles.modalStatVal}>
+                    {sessionSummary?.averagePaceMinPerKm ?? currentPace}/km
+                  </Text>
                 </View>
               </View>
 
@@ -304,6 +548,15 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: '#10b981',
   },
+  gpsDotActive: {
+    backgroundColor: '#10b981',
+  },
+  gpsDotDenied: {
+    backgroundColor: '#ef4444',
+  },
+  gpsDotSim: {
+    backgroundColor: '#3b82f6',
+  },
   gpsText: {
     fontSize: 11,
     color: '#9ca3af',
@@ -312,6 +565,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+  },
+  modeButton: {
+    backgroundColor: '#1e293b',
+    borderColor: '#334155',
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+  },
+  modeButtonActive: {
+    backgroundColor: '#1e3a8a',
+    borderColor: '#3b82f6',
+  },
+  modeButtonText: {
+    color: '#93c5fd',
+    fontSize: 12,
+    fontWeight: '700',
   },
   langButton: {
     backgroundColor: '#1a231c',

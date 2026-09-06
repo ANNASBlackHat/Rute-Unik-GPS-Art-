@@ -131,6 +131,52 @@ export function processRouteGpx(
 }
 
 /**
+ * Retrieves route detail including coordinates and turn cues.
+ */
+export function getRouteDetailWithCoordinates(
+  routeId: string
+): MobileRouteDetail {
+  const item =
+    FALLBACK_ROUTES.find((r) => r.id === routeId) || FALLBACK_ROUTES[0];
+
+  const baseLat =
+    item.city === 'Jakarta'
+      ? -6.1754
+      : item.city === 'Bandung'
+        ? -6.885
+        : -7.7713;
+  const baseLon =
+    item.city === 'Jakarta'
+      ? 106.8272
+      : item.city === 'Bandung'
+        ? 107.613
+        : 110.3778;
+
+  const sampleCoords: [number, number][] = [
+    [baseLon, baseLat],
+    [baseLon + 0.002, baseLat + 0.001],
+    [baseLon + 0.003, baseLat + 0.003],
+    [baseLon + 0.002, baseLat + 0.005],
+    [baseLon - 0.001, baseLat + 0.006],
+    [baseLon - 0.003, baseLat + 0.004],
+    [baseLon - 0.002, baseLat + 0.001],
+    [baseLon, baseLat],
+  ];
+
+  const turnCues = extractTurnCues(sampleCoords, {
+    minSegmentMeters: 10,
+    minTurnAngleDegrees: 20,
+  });
+
+  return {
+    ...item,
+    coordinates: sampleCoords,
+    turnCues,
+    totalTurns: turnCues.length,
+  };
+}
+
+/**
  * Formats distance in meters into localized km string (e.g. 6.5 km)
  */
 export function formatDistanceKm(meters: number): string {
