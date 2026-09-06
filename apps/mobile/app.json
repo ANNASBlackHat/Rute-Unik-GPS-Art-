@@ -4,7 +4,13 @@
     "slug": "rute-unik",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1F2A1E"
+    },
     "platforms": [
       "android",
       "ios"
@@ -15,6 +21,10 @@
     },
     "android": {
       "package": "com.ruteunik.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1F2A1E"
+      },
       "permissions": [
         "ACCESS_COARSE_LOCATION",
         "ACCESS_FINE_LOCATION",

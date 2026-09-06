@@ -7,6 +7,7 @@ import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 import { Menu, X, Smartphone } from 'lucide-react';
 import { APK_DOWNLOAD_CONFIG } from '@/config/appDownload';
 import { ApkDownloadModal } from './ApkDownloadModal';
+import { BrandLogo } from '@/components/ui/BrandLogo';
 
 interface NavUser {
   id: string;
@@ -73,8 +74,9 @@ export function Navbar(_props?: { locale?: string }) {
         {/* Brand Logo */}
         <Link
           href="/"
-          className="flex items-center gap-2 group text-decoration-none shrink-0"
+          className="flex items-center gap-2.5 group text-decoration-none shrink-0"
         >
+          <BrandLogo size={30} className="transition-transform group-hover:scale-105" />
           <span className="font-display text-xl tracking-tight text-ink uppercase group-hover:text-trail-orange transition-colors">
             RUTE UNIK
           </span>

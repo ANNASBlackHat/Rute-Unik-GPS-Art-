@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+    <rect width="1024" height="1024" rx="224" fill="#1F2A1E"/>
+       <!-- Topographic Elevation Contour Lines -->
+       <g fill="none" stroke="#2B3A2A" stroke-width="14" opacity="0.65">
+         <path d="M-50,300 Q260,180 520,340 T1080,260" />
+         <path d="M-50,520 Q320,380 640,560 T1080,480" />
+         <path d="M-50,740 Q220,600 580,780 T1080,700" />
+       </g>
+       <!-- Subtle Inner Border -->
+       <rect x="24" y="24" width="976" height="976" rx="200" fill="none" stroke="#3A4D38" stroke-width="12" opacity="0.4"/>
+
+    <!-- GPS Trail Marker Art Canvas -->
+    <g id="gps-route-r" transform="translate(40, 20)">
+      <!-- Soft Ambient Route Glow under the track -->
+      <path
+        d="M 330,760 L 330,300 C 330,190 490,190 580,260 C 670,330 660,450 560,500 L 330,500 M 520,490 L 680,760"
+        fill="none"
+        stroke="#E8562C"
+        stroke-width="110"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        opacity="0.25"
+      />
+
+      <!-- Primary Route Track: Trail Orange (#E8562C) -->
+      <path
+        d="M 330,760 L 330,300 C 330,190 490,190 580,260 C 670,330 660,450 560,500 L 330,500 M 520,490 L 680,760"
+        fill="none"
+        stroke="#E8562C"
+        stroke-width="78"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+
+      <!-- Inner Route Dash / Centerline (Topographic GPS style) -->
+      <path
+        d="M 330,760 L 330,300 C 330,190 490,190 580,260 C 670,330 660,450 560,500 L 330,500 M 520,490 L 680,760"
+        fill="none"
+        stroke="#F7F5EF"
+        stroke-width="16"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-dasharray="24 28"
+        opacity="0.92"
+      />
+
+      <!-- START Waypoint (Green Beacon at bottom left of stem) -->
+      <circle cx="330" cy="760" r="48" fill="#10B981" stroke="#F7F5EF" stroke-width="14" />
+      <circle cx="330" cy="760" r="18" fill="#F7F5EF" />
+
+      <!-- MID-WAYPOINT / ART INTERSECTION (Waist of R) -->
+      <circle cx="560" cy="500" r="28" fill="#F7F5EF" stroke="#1F2A1E" stroke-width="8" />
+      <circle cx="560" cy="500" r="12" fill="#E8562C" />
+
+      <!-- FINISH Waypoint (Outdoor Beacon at kick leg of R) -->
+      <circle cx="680" cy="760" r="48" fill="#E8562C" stroke="#F7F5EF" stroke-width="14" />
+      <circle cx="680" cy="760" r="20" fill="#F7F5EF" />
+    </g>
+  </svg>
