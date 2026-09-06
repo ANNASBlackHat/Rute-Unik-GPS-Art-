@@ -16,6 +16,7 @@ import {
   MobileRouteDetail,
   getRouteDetailWithCoordinates,
 } from '../../services/routeService';
+import { RouteShapePreview } from '../../components/RouteShapePreview';
 
 export default function RouteDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -65,6 +66,32 @@ export default function RouteDetailScreen() {
             <Text style={styles.routeCity}>📍 {route.city}, Indonesia</Text>
           </View>
 
+          {/* Hero GPS Art Shape Canvas */}
+          <View style={styles.heroShapeCard}>
+            <View style={styles.heroShapeHeader}>
+              <Text style={styles.heroShapeTitle}>BENTUK GPS ART</Text>
+              <View style={styles.heroShapeBadge}>
+                <Text style={styles.heroShapeBadgeText}>100% Sesuai Rute</Text>
+              </View>
+            </View>
+
+            <View style={styles.heroShapeBox}>
+              <RouteShapePreview
+                svgXml={route.thumbnailSvg}
+                coordinates={route.coordinates}
+                strokeColor="#34d399"
+                strokeWidth={3.8}
+                height={220}
+                showEndpoints={true}
+                fallbackLabel={route.name}
+              />
+            </View>
+
+            <Text style={styles.heroShapeHint}>
+              💡 Gambar bentuk ini di atas peta jalanan dengan berlari mengikuti panduan suara turn-by-turn.
+            </Text>
+          </View>
+
           {/* Stats Bar */}
           <View style={styles.statsGrid}>
             <View style={styles.statBox}>
@@ -82,8 +109,10 @@ export default function RouteDetailScreen() {
             </View>
 
             <View style={styles.statBox}>
-              <Text style={styles.statLabel}>STATUS</Text>
-              <Text style={styles.statNumber}>Resmi</Text>
+              <Text style={styles.statLabel}>TOTAL BELOKAN</Text>
+              <Text style={styles.statNumber}>
+                {route.totalTurns ?? route.turnCues?.length ?? 0}
+              </Text>
             </View>
           </View>
 
@@ -181,6 +210,57 @@ const styles = StyleSheet.create({
   routeCity: {
     fontSize: 14,
     color: '#9ca3af',
+  },
+  heroShapeCard: {
+    backgroundColor: '#131915',
+    borderColor: '#223126',
+    borderWidth: 1,
+    borderRadius: 20,
+    padding: 18,
+    marginBottom: 16,
+  },
+  heroShapeHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  heroShapeTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#9ca3af',
+    letterSpacing: 1,
+  },
+  heroShapeBadge: {
+    backgroundColor: '#1a2c1f',
+    borderColor: '#2e4933',
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  heroShapeBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#34d399',
+  },
+  heroShapeBox: {
+    backgroundColor: '#0a110c',
+    borderColor: '#19281e',
+    borderWidth: 1,
+    borderRadius: 16,
+    height: 230,
+    padding: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  heroShapeHint: {
+    fontSize: 12,
+    color: '#89958d',
+    lineHeight: 18,
+    marginTop: 12,
+    textAlign: 'center',
   },
   statsGrid: {
     flexDirection: 'row',

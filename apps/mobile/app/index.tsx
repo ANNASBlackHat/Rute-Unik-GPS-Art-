@@ -20,6 +20,7 @@ import {
   fetchLiveCities,
   MobileRouteItem,
 } from '../services/routeService';
+import { RouteShapePreview } from '../components/RouteShapePreview';
 
 export default function DirectoryScreen() {
   const router = useRouter();
@@ -192,6 +193,20 @@ export default function DirectoryScreen() {
                   <Text style={styles.categoryBadgeText}>
                     {route.shapeCategory.toUpperCase()}
                   </Text>
+                </View>
+              </View>
+
+              {/* GPS Art Shape Visual Preview */}
+              <View style={styles.shapePreviewBox}>
+                <RouteShapePreview
+                  svgXml={route.thumbnailSvg}
+                  strokeColor="#34d399"
+                  strokeWidth={3.5}
+                  height={130}
+                  fallbackLabel={route.name}
+                />
+                <View style={styles.shapeBadgeOverlay}>
+                  <Text style={styles.shapeBadgeText}>GPS ART</Text>
                 </View>
               </View>
 
@@ -386,5 +401,34 @@ const styles = StyleSheet.create({
     color: '#062817',
     fontWeight: '800',
     fontSize: 12,
+  },
+  shapePreviewBox: {
+    backgroundColor: '#0a110c',
+    borderColor: '#19281e',
+    borderWidth: 1,
+    borderRadius: 12,
+    height: 140,
+    marginVertical: 10,
+    padding: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  shapeBadgeOverlay: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    backgroundColor: 'rgba(10, 17, 12, 0.85)',
+    borderColor: '#1f3525',
+    borderWidth: 1,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  shapeBadgeText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#34d399',
+    letterSpacing: 0.5,
   },
 });
