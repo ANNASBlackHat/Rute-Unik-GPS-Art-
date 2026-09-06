@@ -18,4 +18,15 @@ config.resolver.nodeModulesPaths = [
 // 3. Prevent Metro from ascending the filesystem hierarchy to resolve mismatched packages
 config.resolver.disableHierarchicalLookup = true;
 
+// 4. In monorepos, resolve asset plugins to absolute file paths so hoisted Metro can find them
+if (config.transformer?.assetPlugins) {
+  config.transformer.assetPlugins = config.transformer.assetPlugins.map((plugin) => {
+    try {
+      return require.resolve(plugin, { paths: [projectRoot, monorepoRoot] });
+    } catch {
+      return plugin;
+    }
+  });
+}
+
 module.exports = config;
