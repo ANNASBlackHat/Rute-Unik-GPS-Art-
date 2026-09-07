@@ -1,10 +1,31 @@
 import React from 'react';
+import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { getAuthUser } from '@/lib/supabase/server';
 import { supabase } from '@/lib/supabase';
 import { MyRoutesList, MyRouteItem } from '@/components/dashboard/MyRoutesList';
 import { ChangePasswordForm } from '@/components/auth/ChangePasswordForm';
+import { localeUrl } from '@/lib/site';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations('dashboard');
+  return {
+    title: t('myUploadsTitle'),
+    robots: {
+      index: false,
+      follow: false,
+    },
+    alternates: {
+      canonical: localeUrl(locale, '/me'),
+    },
+  };
+}
 
 export default async function ContributorDashboardPage({
   params,

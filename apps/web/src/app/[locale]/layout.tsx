@@ -6,11 +6,13 @@ import {
 } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import type { Metadata, Viewport } from 'next';
-import { routing } from '@/i18n/routing';
+import { routing, Link } from '@/i18n/routing';
 import { fontDisplay, fontData, fontBody } from '@/lib/fonts';
 import { Navbar } from '@/components/layout/Navbar';
 import { RouteFocus } from '@/components/RouteFocus';
 import { localeUrl } from '@/lib/site';
+import { supabase } from '@/lib/supabase';
+import { citySlug } from '@/lib/city';
 import '../globals.css';
 
 export function generateStaticParams() {
@@ -45,7 +47,6 @@ export async function generateMetadata({
     },
     manifest: '/manifest.webmanifest',
     alternates: {
-      canonical: homeUrl,
       languages,
     },
     openGraph: {
@@ -80,6 +81,14 @@ export default async function LocaleLayout({
   setRequestLocale(locale);
   const messages = await getMessages();
 
+  let cities: { name: string }[] = [];
+  try {
+    const { data } = await supabase.from('cities').select('name').order('name');
+    cities = (data as { name: string }[]) || [];
+  } catch {
+    // fallback gracefully
+  }
+
   return (
     <html
       lang={locale}
@@ -104,16 +113,34 @@ export default async function LocaleLayout({
             {children}
           </main>
 
-          <footer className="border-contour-tan text-ink/60 font-body border-t py-6 text-center text-xs">
-            <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-2 px-4 sm:flex-row">
-              <p className="font-display text-ink/70 tracking-wider uppercase">
-                RUTE UNIK © 2026
-              </p>
-              <p className="font-data text-[11px]">
-                {locale === 'id'
-                  ? 'Didesain dengan estetika peta topografi & penanda jalur.'
-                  : 'Designed with topographic & trail-marker aesthetic.'}
-              </p>
+          <footer className="border-contour-tan text-ink/60 font-body border-t py-6 text-xs">
+            <div className="mx-auto max-w-6xl px-4 sm:px-6 space-y-4">
+              {cities.length > 0 && (
+                <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 border-b border-contour-tan/50 pb-4 text-[11px] font-data">
+                  <span className="text-ink/80 font-bold uppercase tracking-wider">
+                    {locale === 'id' ? 'KOTA POPULER:' : 'EXPLORE CITIES:'}
+                  </span>
+                  {cities.map((city) => (
+                    <Link
+                      key={city.name}
+                      href={`/cities/${citySlug(city.name)}`}
+                      className="text-ink/70 hover:text-ink transition-colors underline-offset-4 hover:underline"
+                    >
+                      {city.name}
+                    </Link>
+                  ))}
+                </div>
+              )}
+              <div className="flex flex-col items-center justify-between gap-2 sm:flex-row text-center">
+                <p className="font-display text-ink/70 tracking-wider uppercase">
+                  RUTE UNIK © 2026
+                </p>
+                <p className="font-data text-[11px]">
+                  {locale === 'id'
+                    ? 'Didesain dengan estetika peta topografi & penanda jalur.'
+                    : 'Designed with topographic & trail-marker aesthetic.'}
+                </p>
+              </div>
             </div>
           </footer>
         </NextIntlClientProvider>

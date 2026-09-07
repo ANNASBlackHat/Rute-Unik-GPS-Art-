@@ -10,6 +10,7 @@ import { Link } from '@/i18n/routing';
 import { RouteActionsMenu } from '@/components/routes/RouteActionsMenu';
 import { ViewTracker } from '@/components/routes/ShareButton';
 import { localeUrl } from '@/lib/site';
+import { citySlug } from '@/lib/city';
 
 export async function generateMetadata({
   params,
@@ -159,7 +160,9 @@ export default async function RouteDetailPage({
                   '@type': 'ListItem',
                   position: 2,
                   name: cityName || 'Routes',
-                  item: localeUrl(locale, '/'),
+                  item: cityName
+                    ? localeUrl(locale, `/cities/${citySlug(cityName)}`)
+                    : localeUrl(locale, '/'),
                 },
                 {
                   '@type': 'ListItem',
@@ -193,10 +196,19 @@ export default async function RouteDetailPage({
 
       {/* Header Info */}
       <div className="space-y-1">
-        <span className="font-data text-ink/60 text-xs font-semibold tracking-wider uppercase">
-          {cityName}
-          {countryName ? `, ${countryName}` : ''}
-        </span>
+        {cityName ? (
+          <Link
+            href={`/cities/${citySlug(cityName)}`}
+            className="font-data text-ink/60 hover:text-ink text-xs font-semibold tracking-wider uppercase underline-offset-4 hover:underline transition-colors block"
+          >
+            {cityName}
+            {countryName ? `, ${countryName}` : ''}
+          </Link>
+        ) : (
+          <span className="font-data text-ink/60 text-xs font-semibold tracking-wider uppercase block">
+            Unknown
+          </span>
+        )}
         <h1 className="font-display text-ink text-3xl tracking-tight uppercase sm:text-4xl">
           {route.name}
         </h1>
@@ -217,9 +229,9 @@ export default async function RouteDetailPage({
         <div className="space-y-6">
           {/* GPX Artwork Preview Box (Prominent preview above stats) */}
           <Card className="space-y-3">
-            <h3 className="font-display text-ink/70 text-xs tracking-wider uppercase">
+            <h2 className="font-display text-ink/70 text-xs tracking-wider uppercase">
               {t('shapePreview')}
-            </h3>
+            </h2>
             <div className="bg-paper/60 border-contour-tan/50 flex aspect-square w-full items-center justify-center rounded-[8px] border p-6">
               <div
                 className="[&>svg]:stroke-ink flex h-full w-full items-center justify-center [&>svg]:h-full [&>svg]:max-h-full [&>svg]:w-full"

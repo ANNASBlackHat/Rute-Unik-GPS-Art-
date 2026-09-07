@@ -1,8 +1,29 @@
 import React from 'react';
-import { setRequestLocale } from 'next-intl/server';
+import type { Metadata } from 'next';
+import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { supabase } from '@/lib/supabase';
 import { UploadForm } from '@/components/upload/UploadForm';
 import { parseCityWithCenter } from '@/lib/city';
+import { localeUrl } from '@/lib/site';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations('common');
+  return {
+    title: t('upload'),
+    robots: {
+      index: false,
+      follow: false,
+    },
+    alternates: {
+      canonical: localeUrl(locale, '/upload'),
+    },
+  };
+}
 
 export default async function UploadPage({
   params,

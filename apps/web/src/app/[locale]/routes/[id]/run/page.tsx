@@ -1,10 +1,28 @@
 import React from 'react';
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { setRequestLocale } from 'next-intl/server';
 import { supabase } from '@/lib/supabase';
 import { RunTracker } from '@/components/run/RunTracker';
-
 import { parseGpxCoordinates } from '@/lib/geo';
+import { localeUrl } from '@/lib/site';
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string; id: string }>;
+}): Promise<Metadata> {
+  const { locale, id } = await params;
+  return {
+    robots: {
+      index: false,
+      follow: true,
+    },
+    alternates: {
+      canonical: localeUrl(locale, `/routes/${id}`),
+    },
+  };
+}
 
 export default async function RunModePage({
   params,

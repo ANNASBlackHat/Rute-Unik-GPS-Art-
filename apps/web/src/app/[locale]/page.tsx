@@ -155,6 +155,14 @@ export default async function HomePage({
             url: localeUrl(locale, '/'),
             description: t('subtitle'),
             inLanguage: locale,
+            potentialAction: {
+              '@type': 'SearchAction',
+              target: {
+                '@type': 'EntryPoint',
+                urlTemplate: `${localeUrl(locale, '/')}?q={search_term_string}`,
+              },
+              'query-input': 'required name=search_term_string',
+            },
           }),
         }}
       />

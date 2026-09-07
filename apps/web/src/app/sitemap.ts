@@ -10,11 +10,14 @@ const LOCALES = ['id', 'en'] as const;
 function languagesFor(
   path: string,
 ): MetadataRoute.Sitemap[number]['alternates'] {
+  const normalizedPath =
+    path === '/' ? '' : path.startsWith('/') ? path : `/${path}`;
+  const base = getSiteUrl();
   return {
     languages: {
-      id: `${getSiteUrl()}/id${path}`,
-      en: `${getSiteUrl()}/en${path}`,
-      'x-default': `${getSiteUrl()}/id${path}`,
+      id: `${base}/id${normalizedPath}`,
+      en: `${base}/en${normalizedPath}`,
+      'x-default': `${base}/id${normalizedPath}`,
     },
   };
 }
@@ -51,23 +54,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   );
 
   // Published route pages (exclude pending/rejected)
-  let routeIds: { id: string }[] = [];
+  let routes: { id: string; created_at?: string }[] = [];
   try {
     const { data } = await supabase
       .from('routes')
-      .select('id')
+      .select('id, created_at')
       .in('status', ['official', 'community']);
-    routeIds = (data as { id: string }[]) || [];
+    routes = (data as { id: string; created_at?: string }[]) || [];
   } catch {
     // fall back to homepages/cities only if the DB is unreachable at build time
   }
 
-  const routeEntries: MetadataRoute.Sitemap = routeIds.flatMap((r) =>
+  const routeEntries: MetadataRoute.Sitemap = routes.flatMap((r) =>
     LOCALES.map((locale) => ({
       url: `${base}/${locale}/routes/${r.id}`,
       changeFrequency: 'weekly',
       priority: 0.7,
-      lastModified: new Date(),
+      lastModified: r.created_at ? new Date(r.created_at) : new Date(),
       alternates: languagesFor(`/routes/${r.id}`),
     })),
   );
