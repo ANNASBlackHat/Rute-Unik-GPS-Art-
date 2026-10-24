@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useSyncExternalStore } from 'react';
+import React, { useState, useEffect, useSyncExternalStore } from 'react';
 import { Copy, Check, Share2 } from 'lucide-react';
 import { useTranslations, useLocale } from 'next-intl';
 import {
