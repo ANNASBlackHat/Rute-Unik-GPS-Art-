@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useSyncExternalStore } from 'react';
-import { Copy, Check, Share2 } from 'lucide-react';
+import React, { useState, useEffect, useRef, useSyncExternalStore } from 'react';
+import { Copy, Check, Share2, ChevronDown } from 'lucide-react';
 import { useTranslations, useLocale } from 'next-intl';
 import {
   buildShareMessage,
@@ -16,6 +16,7 @@ interface ShareButtonProps {
   cityName?: string;
   distanceKm?: string;
   elevationGain?: string;
+  variant?: 'top-bar' | 'inline';
 }
 
 const emptySubscribe = () => () => {};
@@ -50,11 +51,40 @@ export function ShareButton({
   cityName,
   distanceKm,
   elevationGain,
+  variant = 'top-bar',
 }: ShareButtonProps) {
   const t = useTranslations('routeDetail');
   const locale = useLocale();
+  const [isOpen, setIsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const canNativeShare = useCanNativeShare();
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('touchstart', handlePointerDown);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('touchstart', handlePointerDown);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen]);
 
   const getShareUrl = () => {
     if (typeof window === 'undefined') return '';
@@ -85,9 +115,6 @@ export function ShareButton({
       /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
     if (isMobile) {
-      // Trigger whatsapp:// custom scheme on mobile:
-      // When both WhatsApp and WhatsApp Business are installed,
-      // the mobile OS prompts the native app chooser ("Open with WhatsApp / WA Business").
       window.location.href = getWhatsAppSchemeUrl(text);
     } else {
       const waUrl = getWhatsAppShareUrl(text);
@@ -133,9 +160,113 @@ export function ShareButton({
     }
   };
 
+  // 1. Top-Bar Popover Variant (Clean Header Integration)
+  if (variant === 'top-bar') {
+    return (
+      <div className="relative inline-block" ref={menuRef}>
+        <button
+          type="button"
+          onClick={() => setIsOpen((prev) => !prev)}
+          aria-expanded={isOpen}
+          aria-haspopup="true"
+          className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[11px] font-data font-semibold tracking-wide uppercase rounded-[4px] border border-contour-tan bg-chalk text-ink hover:border-ink hover:bg-paper transition-colors cursor-pointer select-none shadow-xs"
+          title={t('shareRoute')}
+        >
+          <Share2 size={12} strokeWidth={1.8} className="text-trail-orange shrink-0" aria-hidden="true" />
+          <span>{t('shareRoute')}</span>
+          <ChevronDown
+            size={11}
+            strokeWidth={1.8}
+            className={`text-ink/60 transition-transform duration-150 ${isOpen ? 'rotate-180' : ''}`}
+            aria-hidden="true"
+          />
+        </button>
+
+        {isOpen && (
+          <div
+            className="absolute right-0 top-full mt-1.5 w-60 bg-chalk border border-contour-tan rounded-[4px] shadow-xl p-1.5 z-[60] space-y-1 animate-in fade-in zoom-in-95 duration-150"
+            role="menu"
+            aria-orientation="vertical"
+          >
+            {/* WhatsApp */}
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                handleShareWhatsApp();
+                setIsOpen(false);
+              }}
+              className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-[3px] text-xs font-display tracking-wider uppercase text-ink hover:bg-[#25D366]/10 hover:text-[#128C7E] transition-colors cursor-pointer text-left select-none"
+            >
+              <div className="w-5 h-5 rounded-full bg-[#25D366]/15 flex items-center justify-center shrink-0">
+                <WhatsAppIcon className="w-3.5 h-3.5 text-[#25D366]" />
+              </div>
+              <span>WhatsApp</span>
+            </button>
+
+            {/* Telegram */}
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => {
+                handleShareTelegram();
+                setIsOpen(false);
+              }}
+              className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-[3px] text-xs font-display tracking-wider uppercase text-ink hover:bg-[#24A1DE]/10 hover:text-[#0088cc] transition-colors cursor-pointer text-left select-none"
+            >
+              <div className="w-5 h-5 rounded-full bg-[#24A1DE]/15 flex items-center justify-center shrink-0">
+                <TelegramIcon className="w-3.5 h-3.5 text-[#24A1DE]" />
+              </div>
+              <span>Telegram</span>
+            </button>
+
+            {/* Copy Info & Link */}
+            <button
+              type="button"
+              role="menuitem"
+              onClick={handleCopyDetails}
+              className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-[3px] text-xs font-display tracking-wider uppercase text-ink hover:bg-paper transition-colors cursor-pointer text-left select-none"
+            >
+              <div className="w-5 h-5 rounded-full bg-contour-tan/20 flex items-center justify-center shrink-0">
+                {copied ? (
+                  <Check size={13} strokeWidth={2} className="text-trail-orange" />
+                ) : (
+                  <Copy size={13} strokeWidth={1.8} className="text-ink/70" />
+                )}
+              </div>
+              <span className={copied ? 'text-trail-orange font-semibold' : ''}>
+                {copied ? t('shareDetailsCopied') : t('copyShareDetails')}
+              </span>
+            </button>
+
+            {/* More / Native Share Sheet */}
+            {canNativeShare && (
+              <div className="pt-1 mt-1 border-t border-contour-tan/50">
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={() => {
+                    handleNativeShare();
+                    setIsOpen(false);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-[3px] text-xs font-display tracking-wider uppercase text-ink/70 hover:text-ink hover:bg-paper transition-colors cursor-pointer text-left select-none"
+                >
+                  <div className="w-5 h-5 rounded-full bg-contour-tan/15 flex items-center justify-center shrink-0">
+                    <Share2 size={12} strokeWidth={1.8} className="text-ink/60" />
+                  </div>
+                  <span>{t('shareMore')}</span>
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // 2. Inline Variant (Full Grid)
   return (
     <div className="space-y-2">
-      {/* 1. Direct Messaging App Share Buttons (WhatsApp & Telegram) */}
       <div className="grid grid-cols-2 gap-2">
         <button
           type="button"
@@ -158,7 +289,6 @@ export function ShareButton({
         </button>
       </div>
 
-      {/* 2. Copy Route Details & Link */}
       <button
         type="button"
         onClick={handleCopyDetails}
@@ -178,7 +308,6 @@ export function ShareButton({
         )}
       </button>
 
-      {/* 3. System / More Share Options (shown if device supports native share) */}
       {canNativeShare && (
         <button
           type="button"

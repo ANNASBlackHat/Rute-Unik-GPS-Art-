@@ -2,10 +2,9 @@
 
 import React, { useState } from 'react';
 import { StartRunButton } from './StartRunButton';
-import { ShareButton } from './ShareButton';
 import { DownloadImageButton } from './DownloadImageButton';
 import { VideoExportButton } from '@/components/video/VideoExportButton';
-import { Download, Share2, ChevronDown, ChevronUp, Smartphone } from 'lucide-react';
+import { Download, ChevronDown, ChevronUp, Smartphone } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { APK_DOWNLOAD_CONFIG } from '@/config/appDownload';
 import { ApkDownloadModal } from '@/components/layout/ApkDownloadModal';
@@ -60,7 +59,7 @@ export function RouteActionsMenu({
         </button>
       )}
 
-      {/* 3. Consolidated Export & Share Section */}
+      {/* 4. Dedicated Media Export Section (Image & Video) */}
       <div className="border border-contour-tan/70 rounded-[4px] bg-paper/30 overflow-hidden">
         <button
           type="button"
@@ -71,8 +70,8 @@ export function RouteActionsMenu({
           className="w-full px-3 py-2 flex items-center justify-between font-display text-xs uppercase tracking-wider text-ink/80 hover:text-ink hover:bg-paper/50 transition-colors cursor-pointer select-none"
         >
           <span className="inline-flex items-center gap-1.5">
-            <Share2 size={14} strokeWidth={1.5} aria-hidden="true" />
-            <span>Share & Export Media</span>
+            <Download size={14} strokeWidth={1.5} aria-hidden="true" />
+            <span>{t('exportMedia')}</span>
           </span>
           {showExports ? (
             <ChevronUp size={14} strokeWidth={1.5} aria-hidden="true" />
@@ -86,15 +85,6 @@ export function RouteActionsMenu({
             id="export-share-options"
             className="p-3 border-t border-contour-tan/50 bg-chalk space-y-2.5 animate-in slide-in-from-top-1 duration-150"
           >
-            {/* Share Link button */}
-            <ShareButton
-              routeId={routeId}
-              routeName={routeName}
-              cityName={cityName}
-              distanceKm={distanceKm}
-              elevationGain={elevationGain}
-            />
-
             {/* Card & Line Only PNG Downloads */}
             <DownloadImageButton
               routeName={routeName}

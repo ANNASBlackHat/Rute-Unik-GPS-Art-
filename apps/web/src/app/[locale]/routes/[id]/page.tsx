@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Card } from '@/components/ui/Card';
 import { Link } from '@/i18n/routing';
 import { RouteActionsMenu } from '@/components/routes/RouteActionsMenu';
-import { ViewTracker } from '@/components/routes/ShareButton';
+import { ShareButton, ViewTracker } from '@/components/routes/ShareButton';
 import { getSiteUrl, localeUrl } from '@/lib/site';
 import { citySlug } from '@/lib/city';
 
@@ -190,21 +190,32 @@ export default async function RouteDetailPage({
       />
 
       {/* Back Navigation Bar */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <Link
           href="/"
-          className="font-display text-ink/70 hover:text-ink inline-flex items-center gap-1 text-xs tracking-wider uppercase transition-colors"
+          className="font-display text-ink/70 hover:text-ink inline-flex items-center gap-1 text-xs tracking-wider uppercase transition-colors shrink-0"
         >
           ← {t('backToDirectory')}
         </Link>
 
-        <Badge
-          variant={
-            route.status as 'official' | 'community' | 'pending' | 'rejected'
-          }
-        >
-          {route.status === 'official' ? tHome('official') : tHome('community')}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Badge
+            variant={
+              route.status as 'official' | 'community' | 'pending' | 'rejected'
+            }
+          >
+            {route.status === 'official' ? tHome('official') : tHome('community')}
+          </Badge>
+
+          <ShareButton
+            routeId={route.id}
+            routeName={route.name}
+            cityName={cityName !== 'Unknown' ? cityName : undefined}
+            distanceKm={distanceKm}
+            elevationGain={elevation !== '--' ? elevation : undefined}
+            variant="top-bar"
+          />
+        </div>
       </div>
 
       {/* Header Info */}
