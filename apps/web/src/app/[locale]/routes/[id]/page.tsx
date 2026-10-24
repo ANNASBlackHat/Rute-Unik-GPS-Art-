@@ -9,7 +9,7 @@ import { Card } from '@/components/ui/Card';
 import { Link } from '@/i18n/routing';
 import { RouteActionsMenu } from '@/components/routes/RouteActionsMenu';
 import { ViewTracker } from '@/components/routes/ShareButton';
-import { localeUrl } from '@/lib/site';
+import { getSiteUrl, localeUrl } from '@/lib/site';
 import { citySlug } from '@/lib/city';
 
 export async function generateMetadata({
@@ -49,7 +49,7 @@ export async function generateMetadata({
       ? { index: false, follow: false }
       : undefined;
 
-    const ogImageUrl = `${canonicalUrl}/opengraph-image`;
+    const ogImageUrl = `${getSiteUrl()}/api/routes/${route.id}/og`;
 
   return {
     title,

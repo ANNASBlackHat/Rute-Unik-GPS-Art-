@@ -1,6 +1,9 @@
 import { ImageResponse } from 'next/og';
 import { getRoute } from '@/lib/route-data';
 
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 export const alt = 'GPS-art running route on Rute Unik';
@@ -16,7 +19,12 @@ export default async function Image({
   params: Promise<{ locale: string; id: string }>;
 }) {
   const { id } = await params;
-  const route = await getRoute(id);
+  let route = null;
+  try {
+    route = await getRoute(id);
+  } catch {
+    // ignore
+  }
 
   const name = route?.name ?? 'GPS-art Running Route';
   const city = route?.cities?.name ?? '';
@@ -148,7 +156,7 @@ export default async function Image({
               borderRadius: 4,
               fontSize: 22,
               fontWeight: 700,
-              width: 'fit-content',
+              alignSelf: 'flex-start',
             }}
           >
             RUTE UNIK
