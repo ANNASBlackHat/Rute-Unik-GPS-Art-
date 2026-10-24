@@ -65,6 +65,11 @@
     "startRun": "Start Run",
     "shapePreview": "Route Shape Preview",
     "exportVideo": "Export Video",
+    "shareWhatsApp": "Share to WhatsApp",
+    "shareTelegram": "Share to Telegram",
+    "copyShareDetails": "Copy Info & Link",
+    "shareDetailsCopied": "Route Info Copied!",
+    "shareMore": "Share via...",
     "metaKeywords": "GPS art, running routes, GPS art running, route art, running shapes, lari rute"
   },
   "runMode": {

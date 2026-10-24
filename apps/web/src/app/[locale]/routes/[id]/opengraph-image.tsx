@@ -24,6 +24,8 @@ export default async function Image({
     ? (Number(route.distance_m) / 1000).toFixed(2)
     : '';
   const thumbnailSvg = route?.thumbnail_svg ?? '';
+  const pointsMatch = thumbnailSvg.match(/points="([^"]+)"/);
+  const pointsStr = pointsMatch ? pointsMatch[1] : '';
 
   return new ImageResponse(
     <div
@@ -64,11 +66,22 @@ export default async function Image({
             padding: 24,
           }}
         >
-          {thumbnailSvg ? (
-            <div
-              style={{ width: '100%', height: '100%' }}
-              dangerouslySetInnerHTML={{ __html: thumbnailSvg }}
-            />
+          {pointsStr ? (
+            <svg
+              viewBox="0 0 200 200"
+              width="380"
+              height="380"
+              style={{ width: 380, height: 380 }}
+            >
+              <polyline
+                points={pointsStr}
+                fill="none"
+                stroke={TRAIL}
+                strokeWidth={5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
           ) : null}
         </div>
       </div>

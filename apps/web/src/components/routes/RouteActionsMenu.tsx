@@ -91,6 +91,8 @@ export function RouteActionsMenu({
               routeId={routeId}
               routeName={routeName}
               cityName={cityName}
+              distanceKm={distanceKm}
+              elevationGain={elevationGain}
             />
 
             {/* Card & Line Only PNG Downloads */}

@@ -65,6 +65,11 @@
     "startRun": "Mulai Lari",
     "shapePreview": "Pratinjau Bentuk Rute",
     "exportVideo": "Ekspor Video",
+    "shareWhatsApp": "Bagikan ke WhatsApp",
+    "shareTelegram": "Bagikan ke Telegram",
+    "copyShareDetails": "Salin Info & Tautan",
+    "shareDetailsCopied": "Info Rute Disalin!",
+    "shareMore": "Bagikan Lainnya...",
     "metaKeywords": "GPS art, rute lari, lari seni, GPS art running, rute unik, olahraga lari"
   },
   "runMode": {

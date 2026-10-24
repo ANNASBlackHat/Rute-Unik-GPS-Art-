@@ -4,3 +4,4 @@ export * from './svg-thumbnail';
 export * from './shape-category';
 export * from './types';
 export * from './navigation';
+export * from './share';

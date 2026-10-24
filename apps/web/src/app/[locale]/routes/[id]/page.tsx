@@ -49,6 +49,8 @@ export async function generateMetadata({
       ? { index: false, follow: false }
       : undefined;
 
+    const ogImageUrl = `${canonicalUrl}/opengraph-image`;
+
   return {
     title,
     description,
@@ -61,10 +63,21 @@ export async function generateMetadata({
       title,
       description,
       url: canonicalUrl,
+      type: 'website',
+      images: [
+        {
+          url: ogImageUrl,
+          width: 1200,
+          height: 630,
+          alt: `${title} — Rute Unik`,
+        },
+      ],
     },
     twitter: {
+      card: 'summary_large_image',
       title,
       description,
+      images: [ogImageUrl],
     },
   };
 }
