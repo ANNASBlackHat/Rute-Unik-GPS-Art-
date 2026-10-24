@@ -51,10 +51,17 @@ export function buildShareMessage({
 }
 
 /**
- * Creates direct WhatsApp share link.
+ * Creates direct WhatsApp share link (for desktop web or HTTPS fallbacks).
  */
 export function getWhatsAppShareUrl(text: string): string {
   return `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
+}
+
+/**
+ * Creates WhatsApp custom URI scheme link (for mobile devices to trigger OS app chooser).
+ */
+export function getWhatsAppSchemeUrl(text: string): string {
+  return `whatsapp://send?text=${encodeURIComponent(text)}`;
 }
 
 /**

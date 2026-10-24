@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   buildShareMessage,
   getWhatsAppShareUrl,
+  getWhatsAppSchemeUrl,
   getTelegramShareUrl,
 } from '../src/share';
 
@@ -49,6 +50,15 @@ describe('Share Content & URL Generators', () => {
     assert.equal(
       waUrl,
       `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`
+    );
+  });
+
+  it('generates a valid WhatsApp custom scheme URL for mobile chooser', () => {
+    const text = '🏃 *Test Route*\nhttps://example.com';
+    const waScheme = getWhatsAppSchemeUrl(text);
+    assert.equal(
+      waScheme,
+      `whatsapp://send?text=${encodeURIComponent(text)}`
     );
   });
 

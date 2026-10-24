@@ -6,6 +6,7 @@ import { useTranslations, useLocale } from 'next-intl';
 import {
   buildShareMessage,
   getWhatsAppShareUrl,
+  getWhatsAppSchemeUrl,
   getTelegramShareUrl,
 } from '@/lib/share';
 
@@ -79,8 +80,19 @@ export function ShareButton({
   const handleShareWhatsApp = () => {
     trackShare();
     const text = getFormattedMessage();
-    const waUrl = getWhatsAppShareUrl(text);
-    window.open(waUrl, '_blank', 'noopener,noreferrer');
+    const isMobile =
+      typeof navigator !== 'undefined' &&
+      /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+
+    if (isMobile) {
+      // Trigger whatsapp:// custom scheme on mobile:
+      // When both WhatsApp and WhatsApp Business are installed,
+      // the mobile OS prompts the native app chooser ("Open with WhatsApp / WA Business").
+      window.location.href = getWhatsAppSchemeUrl(text);
+    } else {
+      const waUrl = getWhatsAppShareUrl(text);
+      window.open(waUrl, '_blank', 'noopener,noreferrer');
+    }
   };
 
   const handleShareTelegram = () => {
